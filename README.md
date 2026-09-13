@@ -1,66 +1,58 @@
 # Codex Quota Resume · 额度恢复自动续跑
 
-<img src="icon.png" alt="Codex Quota Resume icon" width="160">
+<img src="assets/icon.png" alt="Codex Quota Resume icon" width="160">
 
-Resume unfinished Codex tasks after usage limits reset. Read the actual five-hour and weekly reset times, schedule one check five minutes after recovery, then schedule the next check from fresh account data. No hourly polling during normal operation.
+Resume Codex tasks after five-hour or weekly usage limits reset. **Version 2 adds a zero-token Windows watcher:** idle checks run locally and do not call a model.
 
-在实际额度重置后五分钟检查一次，续跑明确因额度耗尽而中断的原任务，并自动根据最新重置时间预约下一次检查。正常情况下不按小时轮询。
+在五小时或周额度恢复后继续被中断的原任务。**新版加入 Windows 零额度本地监控器：空闲检查不调用模型，不消耗 Codex 用量。**
 
-## Download and install / 下载与安装
+## Download / 下载
 
 **[Download the ready-to-install ZIP / 下载技能包](https://github.com/JOEJOEHA/codex-quota-resume/raw/refs/heads/main/codex-quota-resume.zip)**
 
-Extract the ZIP and put its `codex-quota-resume` folder in your Codex skills directory:
+Extract `codex-quota-resume` into:
 
 - Windows: `%USERPROFILE%\.codex\skills\`
 - macOS / Linux: `~/.codex/skills/`
-- Custom `CODEX_HOME`: use its `skills/` subdirectory.
+- Custom `CODEX_HOME`: its `skills/` directory
 
-The final path should be `skills/codex-quota-resume/SKILL.md`. Reopen Codex or start a new conversation to discover the skill. Installing does not start monitoring; ask Codex to enable it.
-
-解压后将 `codex-quota-resume` 文件夹放入上述技能目录，确认没有重复嵌套同名文件夹，然后重新打开 Codex 或新建对话。安装本身不会启动自动任务。
-
-## Enable / 启用
-
-```text
-Use $codex-quota-resume to automatically resume my unfinished Codex tasks
-that stopped because of usage limits. Check five minutes after the actual
-reset time, then schedule the next check from fresh quota data. Do not poll hourly.
-```
+The final path must be `skills/codex-quota-resume/SKILL.md`. Reopen Codex or start a new task, then send:
 
 ```text
 使用 $codex-quota-resume，为我启用额度恢复后自动续跑。
-自动发现因额度耗尽中断、尚未完成的 Codex 任务；
-在实际重置后五分钟检查，读取新的重置时间并预约下一次，不按小时轮询。
+优先安装零 Codex 用量的本地监控器；只续跑明确因额度耗尽而中断的原任务。
 ```
 
-Specify individual tasks if you want a narrower scope. Ask the skill to show the next check and last dispatch, or to stop monitoring at any time.
+Windows users can also run the installer directly after extracting:
 
-如只希望管理特定任务，请明确指定。可随时要求查看下次检查时间、上次续跑结果或停止监控。
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\codex-quota-resume\scripts\install_windows.ps1"
+```
 
-## Behavior / 工作方式
+Windows 本地模式需要 Python 3，并使用系统任务计划程序。安装器会运行自检、注册计划任务并验证首次后台运行。已有同用途的 Codex heartbeat 应暂停，避免重复执行和额度消耗。
 
-- Reads actual account limits; weekly exhaustion waits for weekly recovery.
-- Updates the same scheduled follow-up rather than creating duplicate tasks.
-- Resumes only tasks with explicit quota-interruption evidence, in their original conversations.
-- Skips completed, canceled, actively running, manually paused, or user-blocked tasks.
-- Records dispatches to avoid duplicate messages and requests stage-level `PROGRESS.md` checkpoints.
-- Does not buy credits, redeem resets, change models, or expand task permissions.
+## How it works / 工作方式
 
-读取实际额度、等待对应窗口恢复、复用同一个计划、保留原对话上下文，并通过派发记录防止重复催跑。不会把空闲对话都当成未完成任务，也不会购买额度或扩大权限。
+The local watcher reads Codex's own session JSONL files. It acts only when a task ends with `usage_limit_exceeded`, preserves the last valid five-hour and weekly reset timestamps, and queues one resume message five minutes after the latest exhausted window resets.
 
-## Requirements and validation / 环境与验证
+本地监控器只认明确的额度错误，不会把空闲、普通失败、已完成、取消或等待用户输入的任务当作候选。它按“任务 + 回合 + 重置时间”去重；再次额度耗尽会进入下一轮等待。每分钟的本地检查不使用 Codex 额度，只有真正续跑原任务时才产生正常用量。
 
-Requires a Codex host exposing account-usage, scheduling, task-history and task-messaging tools. It is an instruction skill, not a standalone daemon or an API quota bypass. Ordinary CLI or web environments may lack these tools. Local work requires the computer, network and app to remain available.
+- Status / 查看：`Get-ScheduledTaskInfo -TaskName 'Codex Quota Resume Watcher'`
+- Stop / 停止：`Disable-ScheduledTask -TaskName 'Codex Quota Resume Watcher'`
+- Resume / 恢复：enable and start the same scheduled task
+- Update / 更新：rerun `scripts/install_windows.ps1` from the new skill
 
-Single-run scheduling and rescheduling depend on the host version. Missing or stale reset data triggers only bounded exception retries. Configuration and package validation have passed; end-to-end recovery across actual quota exhaustion has not yet been verified. Check the first real run before relying on unattended operation.
+On unsupported hosts, the skill can fall back to a short, isolated Codex heartbeat scheduled from the actual reset time. A heartbeat consumes Codex usage on every run, so it is a fallback rather than the preferred Windows mode.
 
-需要宿主提供额度读取、定时任务、任务历史和向原任务发送消息的工具。本技能不是独立后台程序，也不增加额度。本地执行需要电脑、网络和应用可用；单次调度及续订能力取决于宿主版本。已验证技能格式和打包，尚未完成真实额度耗尽后的端到端续跑验证。
+## Requirements and limits / 条件与限制
 
-No personal account data, conversation IDs, credentials or runtime state are included. The icon was generated with OpenAI ImageGen. This is a community project, not an official OpenAI product.
+For unattended local operation, the computer must remain powered on and awake, the user must remain logged in, and Codex plus the network must be available when the resume message is queued. Turning off or locking the display does not stop the Windows scheduled task. Queue failures retry after five minutes.
 
-分享内容不包含个人账户数据、对话 ID、凭据或运行状态。图标由 OpenAI ImageGen 生成。本项目为社区技能，并非 OpenAI 官方产品。
+The parser and scheduler passed self-tests, a real historical quota-error replay, and a live background-task check. The next real quota exhaustion is still the final end-to-end validation.
+
+No personal account data, conversation IDs, credentials, automation state, or local paths are included. The icon was generated with OpenAI ImageGen. This is a community project, not an official OpenAI product.
 
 ## License
 
 [MIT](LICENSE)
+

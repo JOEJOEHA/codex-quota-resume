@@ -1,6 +1,7 @@
 interface:
   display_name: "Codex 额度恢复续跑"
-  icon_small: "./icon.png"
-  icon_large: "./icon.png"
-  short_description: "按实际额度重置时间自动安排检查，在恢复后继续被中断的原任务"
-  default_prompt: "使用 $codex-quota-resume，为我启用额度恢复后自动续跑：按实际重置时间后五分钟检查，自动预约下一次，继续因额度耗尽中断的未完成任务。"
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+  short_description: "用本地零额度监控，在配额恢复后继续被中断的原任务"
+  default_prompt: "使用 $codex-quota-resume，为我启用额度恢复后自动续跑：优先安装零 Codex 用量的本地监控器，在实际重置五分钟后继续明确因额度耗尽中断的任务。"
+
