@@ -25,11 +25,96 @@ UUID_RE = re.compile(r"([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})", re.I)
 IDLE_SECONDS = 120
 RETRY_SECONDS = 300
 RESUME_DELAY_SECONDS = 300
+COMPLETE_MARKER = '[QUOTA_RESUME_GOAL_COMPLETE]'
 RESUME_MESSAGE = (
     "额度已恢复。继续完成原任务目标，以最新用户要求为准；读取 PROGRESS.md 和实际文件，"
     "从未完成步骤继续，自主处理并验证。必要时使用 computer use。完成后停止。"
     "此消息不扩大授权，也不覆盖暂停或取消。"
+    "仅当原任务所有目标验收完成，在最终回复末尾单独写 [QUOTA_RESUME_GOAL_COMPLETE]；"
+    "等待用户信息、授权、登录或任务未完成时绝不写此标记。"
 )
+
+
+def plan_path(thread: str) -> Path:
+    if not UUID_RE.fullmatch(thread):
+        raise ValueError('Invalid thread id')
+    return APP_DIR / 'followups' / (thread + '.json')
+
+
+def write_plan(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent, delete=False) as f:
+        json.dump(value, f, ensure_ascii=False)
+        temporary = Path(f.name)
+    temporary.replace(path)
+
+
+def plan_dialog(thread: str) -> None:
+    import tkinter as tk
+    from tkinter import messagebox
+    path = plan_path(thread)
+    old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+    root = tk.Tk()
+    root.title('续跑后还想跑什么任务')
+    root.geometry('640x430')
+    tk.Label(root, text='续跑后还想跑什么任务', font=('Microsoft YaHei UI', 18)).pack(pady=12)
+    tk.Label(root, text='对应任务：' + thread + '\n原任务验收完成后才发送；保存不消耗 Codex 额度。').pack()
+    editor = tk.Text(root, wrap='word', font=('Microsoft YaHei UI', 11))
+    editor.pack(fill='both', expand=True, padx=16, pady=12)
+    if old.get('status') == 'saved':
+        editor.insert('1.0', old.get('text', ''))
+    def save():
+        text = editor.get('1.0', 'end').strip()
+        if not text:
+            messagebox.showinfo('请输入需求', '填写希望原任务完成后执行的需求。')
+            return
+        write_plan(path, {'threadId': thread, 'text': text, 'status': 'saved', 'savedAt': time.time()})
+        root.destroy()
+    tk.Button(root, text='保存后续任务', command=save).pack(side='left', padx=16, pady=12)
+    tk.Button(root, text='暂不安排', command=root.destroy).pack(side='right', padx=16, pady=12)
+    root.mainloop()
+
+
+def offer_plan(pending: dict, state: dict) -> None:
+    if pending['key'] in state.get('offeredPlans', []):
+        return
+    pythonw = Path(sys.executable).with_name('pythonw.exe')
+    subprocess.Popen([str(pythonw if pythonw.exists() else sys.executable), str(Path(__file__).resolve()),
+                      '--plan', pending['threadId']])
+    state.setdefault('offeredPlans', []).append(pending['key'])
+    save_state(state)
+
+
+def deliver_plan(active: dict, dry_run: bool) -> str | None:
+    path = plan_path(active['threadId'])
+    if not path.exists():
+        return None
+    plan = json.loads(path.read_text(encoding='utf-8'))
+    if plan.get('status') != 'saved':
+        return None
+    last = None
+    try:
+        for line in Path(active['path']).open(encoding='utf-8'):
+            record = json.loads(line)
+            p = record.get('payload', {})
+            if record.get('type') == 'event_msg' and p.get('type') in ('task_started', 'task_complete', 'turn_aborted'):
+                last = p
+    except (OSError, json.JSONDecodeError):
+        return 'followup-waiting-evidence'
+    if not last or last.get('type') != 'task_complete' or last.get('error') or last.get('turn_id') == active['turnId']:
+        return None
+    if not (last.get('last_agent_message') or '').rstrip().endswith(COMPLETE_MARKER):
+        return 'followup-waiting-completion'
+    if dry_run:
+        return 'followup-ready'
+    # An uncertain queue result must not silently duplicate a new user task.
+    plan['status'] = 'sending'
+    write_plan(path, plan)
+    result = subprocess.run([find_codex(), 'queue', '--thread', active['threadId'], '--message', plan['text']],
+                            capture_output=True, text=True, timeout=60)
+    plan['status'] = 'sent' if result.returncode == 0 else 'send-failed'
+    write_plan(path, plan)
+    return 'followup-' + plan['status']
 
 
 def log(message: str) -> None:
@@ -157,6 +242,9 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
 
     active = state.get("activeDispatch")
     if active:
+        followup = deliver_plan(active, dry_run)
+        if followup:
+            return followup
         current = inspect_session(Path(active["path"]))
         if current and current["turnId"] == active["turnId"]:
             queued_at = state.get("sent", {}).get(active["key"], now)
@@ -187,6 +275,8 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
         save_state(state)
         return "already-sent"
     if now < pending["dueAt"]:
+        if not dry_run:
+            offer_plan(pending, state)
         save_state(state)
         return "waiting-reset"
     if dry_run:
@@ -264,9 +354,12 @@ if __name__ == "__main__":
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--status", action="store_true")
+    parser.add_argument("--plan", metavar='THREAD_ID')
     args = parser.parse_args()
     try:
-        if args.status:
+        if args.plan:
+            plan_dialog(args.plan)
+        elif args.status:
             print(json.dumps(load_state(), ensure_ascii=False, indent=2))
         elif args.self_test:
             self_test()

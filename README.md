@@ -61,3 +61,12 @@ No personal account data, conversation IDs, credentials, automation state, or lo
 监控器会缓存未变化的会话日志，并检查全部本机会话。发送后五分钟仍未观察到新回合时，状态为 `dispatch-unconfirmed`，不会盲目重复发送。使用 `python scripts/quota_watcher.py --status` 查看状态。每分钟本地检查仍保留。
 
 验证：实际 `codex queue` 已触发独立监督任务并收到 `QUOTA_RESUME_TEST_OK`；`python scripts/test_watcher.py` 验证等待、去重、再次耗尽及取消。真实账户耗尽后恢复仍未实际经历。
+
+
+## 后续任务弹窗
+
+检测到明确额度耗尽中断并进入等待恢复时，自动弹出“续跑后还想跑什么任务”，同一次中断只提示一次。填写后点击“保存后续任务”，需求仅保存在本机，绑定对应对话。可关闭弹窗而不安排任务。手动编辑：`python scripts/quota_watcher.py --plan <任务UUID>`。
+
+原任务恢复并在最终回复末尾写出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后，监控器才向同一对话发送保存的需求原文。该标记只允许在所有原目标验收完成时输出，不能用于等待用户、登录、批准或失败状态。普通回合结束不会触发后续任务。发送结果不确定时不会自动重复发送，可查看本机 followups 目录状态。
+
+弹窗不调用模型。当前基于日志额度错误发现中断，受一分钟轮询与两分钟静默判断影响，并非余额数字变成 0 的瞬间弹出；锁屏时需解锁后填写。运行记录和填写内容不包含在分享包中。
