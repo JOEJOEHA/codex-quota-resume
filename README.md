@@ -56,3 +56,8 @@ No personal account data, conversation IDs, credentials, automation state, or lo
 
 [MIT](LICENSE)
 
+
+
+监控器会缓存未变化的会话日志，并检查全部本机会话。发送后五分钟仍未观察到新回合时，状态为 `dispatch-unconfirmed`，不会盲目重复发送。使用 `python scripts/quota_watcher.py --status` 查看状态。每分钟本地检查仍保留。
+
+验证：实际 `codex queue` 已触发独立监督任务并收到 `QUOTA_RESUME_TEST_OK`；`python scripts/test_watcher.py` 验证等待、去重、再次耗尽及取消。真实账户耗尽后恢复仍未实际经历。

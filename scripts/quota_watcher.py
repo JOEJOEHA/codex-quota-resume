@@ -16,6 +16,8 @@ from pathlib import Path
 
 APP_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "CodexQuotaWatcher"
 STATE_PATH = APP_DIR / "state.json"
+CACHE_PATH = APP_DIR / "session-cache.json"
+SESSION_CACHE = {}
 LOG_PATH = APP_DIR / "watcher.log"
 SESSIONS_DIR = Path.home() / ".codex" / "sessions"
 CODEX_EXE = Path(os.environ.get("LOCALAPPDATA", "")) / "OpenAI/Codex/bin"
@@ -59,6 +61,20 @@ def thread_id(path: Path) -> str | None:
 
 
 def inspect_session(path: Path) -> dict | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    signature = [stat.st_mtime_ns, stat.st_size]
+    cached = SESSION_CACHE.get(str(path))
+    if cached and cached["signature"] == signature:
+        return cached["value"]
+    value = parse_session(path)
+    SESSION_CACHE[str(path)] = {"signature": signature, "value": value}
+    return value
+
+
+def parse_session(path: Path) -> dict | None:
     """Return the currently open turn and its latest quota snapshot."""
     open_turn = None
     latest_limits = None
@@ -122,9 +138,9 @@ def exhausted_candidate(path: Path, now: float) -> dict | None:
     return current
 
 
-def latest_candidate(now: float) -> dict | None:
-    files = sorted(SESSIONS_DIR.rglob("*.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)[:10]
-    candidates = [candidate for path in files if (candidate := exhausted_candidate(path, now))]
+def latest_candidate(now: float, sent: dict) -> dict | None:
+    files = SESSIONS_DIR.rglob("*.jsonl")
+    candidates = [candidate for path in files if (candidate := exhausted_candidate(path, now)) and candidate["key"] not in sent]
     return max(candidates, key=lambda item: item["modifiedAt"], default=None)
 
 
@@ -142,7 +158,10 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
     active = state.get("activeDispatch")
     if active:
         current = inspect_session(Path(active["path"]))
-        if current and (current["turnId"] == active["turnId"] or not current["quotaError"]):
+        if current and current["turnId"] == active["turnId"]:
+            queued_at = state.get("sent", {}).get(active["key"], now)
+            return "dispatch-unconfirmed" if now - queued_at >= 300 else "waiting-start"
+        if current and not current["quotaError"]:
             return "dispatch-active"
         state["activeDispatch"] = None
 
@@ -157,7 +176,7 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
             state["pending"] = pending
 
     if not pending:
-        pending = latest_candidate(now)
+        pending = latest_candidate(now, state.get("sent", {}))
         state["pending"] = pending
 
     if not pending:
@@ -244,12 +263,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--status", action="store_true")
     args = parser.parse_args()
     try:
-        if args.self_test:
+        if args.status:
+            print(json.dumps(load_state(), ensure_ascii=False, indent=2))
+        elif args.self_test:
             self_test()
         else:
+            try:
+                SESSION_CACHE = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
             result = run(dry_run=args.dry_run)
+            state = load_state()
+            if state.get("status") != result:
+                log(result)
+            state.update(status=result, lastCheckedAt=time.time())
+            save_state(state)
+            CACHE_PATH.write_text(json.dumps(SESSION_CACHE), encoding="utf-8")
             if sys.stdout is not None and not sys.stdout.closed:
                 print(result)
     except Exception as error:
