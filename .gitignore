@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+state.json
+session-cache.json
+monitor.lock
+followups/
+*.zip
+.env
+auth.json

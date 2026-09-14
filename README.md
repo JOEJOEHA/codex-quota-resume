@@ -1,72 +1,99 @@
-# Codex Quota Resume · 额度恢复自动续跑
+# Codex Quota Resume · Windows Beta
 
-<img src="assets/icon.png" alt="Codex Quota Resume icon" width="160">
+为因额度耗尽而中断的 Codex 任务提供本地自动续跑。主监控读取日志，备用监控直接读取 Codex 任务状态；发送前检查**实时可用额度**，不要求旧日志显示 100%，也不固定多等五分钟。
 
-Resume Codex tasks after five-hour or weekly usage limits reset. **Version 2 adds a zero-token Windows watcher:** idle checks run locally and do not call a model.
+**这是测试版，不保证所有 Codex 版本和异常场景都能自动恢复。** 已测试实时查询、后台直接续跑、失败处理及防重复；尚未完成新版在真实额度耗尽—恢复周期中的验收。
 
-在五小时或周额度恢复后继续被中断的原任务。**新版加入 Windows 零额度本地监控器：空闲检查不调用模型，不消耗 Codex 用量。**
+## 它包含什么
 
-## Download / 下载
+- 主监控每分钟检查，备用监控每五分钟独立检查。
+- 两层共用进程锁和发送记录，避免重复启动。
+- 通过 `codex exec resume` 继续原任务，不新建任务，不主动更改模型或购买额度。
+- 深色圆角后续任务输入框，支持选图、粘贴截图和 Windows 截图工具。
+- 监控查询不调用模型；真正续跑会正常消耗 Codex 额度。
 
-**[Download the ready-to-install ZIP / 下载技能包](https://github.com/JOEJOEHA/codex-quota-resume/raw/refs/heads/main/codex-quota-resume.zip)**
+这是 **Python 本地程序 + Windows 计划任务 + Codex Skill**，不是独立桌面 EXE，也不是已上架的插件。
 
-Extract `codex-quota-resume` into:
+## 环境要求
 
-- Windows: `%USERPROFILE%\.codex\skills\`
-- macOS / Linux: `~/.codex/skills/`
-- Custom `CODEX_HOME`: its `skills/` directory
+- Windows 10/11；电脑开机、用户保持登录、网络可用。
+- Python 3.11+，包含 Tkinter；`python`、`pythonw` 可从终端调用。
+- Pillow 图片库。
+- 已登录的 Codex CLI，支持 `exec resume`、`app-server --stdio`、`account/rateLimits/read` 和 `thread/turns/list`。最后一项属于实验接口，Codex 更新可能影响兼容性。
 
-The final path must be `skills/codex-quota-resume/SKILL.md`. Reopen Codex or start a new task, then send:
+## 安装
 
-```text
-使用 $codex-quota-resume，为我启用额度恢复后自动续跑。
-优先安装零 Codex 用量的本地监控器；只续跑明确因额度耗尽而中断的原任务。
-```
+[下载可安装的技能包](https://github.com/JOEJOEHA/codex-quota-resume/raw/refs/heads/main/codex-quota-resume.zip) · [源代码](https://github.com/JOEJOEHA/codex-quota-resume)
 
-Windows users can also run the installer directly after extracting:
+下载本仓库 ZIP 并解压，或用 Git 克隆。在仓库目录打开 PowerShell：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\skills\codex-quota-resume\scripts\install_windows.ps1"
+python -m pip install -r requirements.txt
+& .\scripts\install_windows.ps1
 ```
 
-Windows 本地模式需要 Python 3，并使用系统任务计划程序。安装器会运行自检、注册计划任务并验证首次后台运行。已有同用途的 Codex heartbeat 应暂停，避免重复执行和额度消耗。
+如果系统策略禁止运行脚本，请遵循你的设备或组织策略；本项目不修改系统执行策略。
 
-## How it works / 工作方式
+也可以把仓库链接发给 Codex：
 
-The local watcher reads Codex's own session JSONL files. It acts only when a task ends with `usage_limit_exceeded`, preserves the last valid five-hour and weekly reset timestamps, and queues one resume message five minutes after the latest exhausted window resets.
+> 请阅读这个仓库的 README 和 SKILL.md，检查 Windows 和 Codex CLI 兼容性，然后安装自动续跑并验证两个计划任务。
 
-本地监控器只认明确的额度错误，不会把空闲、普通失败、已完成、取消或等待用户输入的任务当作候选。它按“任务 + 回合 + 重置时间”去重；再次额度耗尽会进入下一轮等待。每分钟的本地检查不使用 Codex 额度，只有真正续跑原任务时才产生正常用量。
+若需要在 Codex 中直接使用 Skill，将本仓库解压为 Codex Skills 目录下的 `codex-quota-resume` 文件夹（其中应直接包含 `SKILL.md`）。仅复制 Skill 不会启用后台监控，仍需运行安装脚本。
 
-- Status / 查看：`Get-ScheduledTaskInfo -TaskName 'Codex Quota Resume Watcher'`
-- Stop / 停止：`Disable-ScheduledTask -TaskName 'Codex Quota Resume Watcher'`
-- Resume / 恢复：enable and start the same scheduled task
-- Update / 更新：rerun `scripts/install_windows.ps1` from the new skill
+安装后会创建：
 
-On unsupported hosts, the skill can fall back to a short, isolated Codex heartbeat scheduled from the actual reset time. A heartbeat consumes Codex usage on every run, so it is a fallback rather than the preferred Windows mode.
+| 项目 | 位置或名称 |
+|---|---|
+| 程序与运行状态 | `%LOCALAPPDATA%\CodexQuotaWatcher` |
+| 主计划任务 | `Codex Quota Resume Watcher` |
+| 备用计划任务 | `Codex Quota Resume Backup` |
 
-## Requirements and limits / 条件与限制
+默认只处理监控启用后发生的额度中断，不自动重启历史遗留任务。
 
-For unattended local operation, the computer must remain powered on and awake, the user must remain logged in, and Codex plus the network must be available when the resume message is queued. Turning off or locking the display does not stop the Windows scheduled task. Queue failures retry after five minutes.
+## 查看、暂停、恢复、卸载
 
-The parser and scheduler passed self-tests, a real historical quota-error replay, and a live background-task check. The next real quota exhaustion is still the final end-to-end validation.
+```powershell
+& .\scripts\manage_windows.ps1 status
+& .\scripts\manage_windows.ps1 pause
+& .\scripts\manage_windows.ps1 resume
+& .\scripts\manage_windows.ps1 uninstall
+```
 
-No personal account data, conversation IDs, credentials, automation state, or local paths are included. The icon was generated with OpenAI ImageGen. This is a community project, not an official OpenAI product.
+暂停会禁用两层的后续调度，不中止已经执行的任务。卸载保留本机需求、图片和运行记录；确认不再需要后可自行删除上述安装目录。不要只停用主层，否则备用层仍会工作。
 
-## License
+## 后续任务与截图
 
-[MIT](LICENSE)
+额度中断时可填写后续任务。手动打开：
 
+```powershell
+python "$env:LOCALAPPDATA\CodexQuotaWatcher\quota_watcher.py" --plan <任务UUID>
+```
 
+`Ctrl+V` 粘贴截图，`Ctrl+Enter` 保存。截图按钮打开 Windows 截图工具，截图后回到输入框粘贴。每个计划最多六张图片。
 
-监控器会缓存未变化的会话日志，并检查全部本机会话。发送后五分钟仍未观察到新回合时，状态为 `dispatch-unconfirmed`，不会盲目重复发送。使用 `python scripts/quota_watcher.py --status` 查看状态。每分钟本地检查仍保留。
+后续任务只有在被监控器恢复的原任务明确完成，并输出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后才发送；普通回合结束、取消或等待用户不会触发它。它不是通用任务队列。
 
-验证：实际 `codex queue` 已触发独立监督任务并收到 `QUOTA_RESUME_TEST_OK`；`python scripts/test_watcher.py` 验证等待、去重、再次耗尽及取消。真实账户耗尽后恢复仍未实际经历。
+## 数据与边界
 
+程序读取本机 Codex 日志、官方本地 App Server 状态及当前账户额度，使用已有 Codex 登录。它不读取或上传登录令牌，不兑换重置券，不购买额度。保存的文字、截图和状态留在本机；实际发送任务及图片时会交给 Codex 按正常服务流程处理。
 
-## 后续任务弹窗
+不要把安装目录、日志、状态文件或截图提交到 GitHub。报告问题时只提供脱敏错误和版本信息。
 
-检测到明确额度耗尽中断并进入等待恢复时，自动弹出“续跑后还想跑什么任务”，同一次中断只提示一次。填写后点击“保存后续任务”，需求仅保存在本机，绑定对应对话。可关闭弹窗而不安排任务。手动编辑：`python scripts/quota_watcher.py --plan <任务UUID>`。
+关机、断网、登录失效、需要人工批准、接口变化或监控进程卡住都可能影响续跑。备用层有独立的任务发现路径，但仍共享 Windows、Python、Codex 和网络，并非完全独立的系统。无法确认是否已启动时，优先防止重复执行。
 
-原任务恢复并在最终回复末尾写出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后，监控器才向同一对话发送保存的需求原文。该标记只允许在所有原目标验收完成时输出，不能用于等待用户、登录、批准或失败状态。普通回合结束不会触发后续任务。发送结果不确定时不会自动重复发送，可查看本机 followups 目录状态。
+## 开发验证
 
-弹窗不调用模型。当前基于日志额度错误发现中断，受一分钟轮询与两分钟静默判断影响，并非余额数字变成 0 的瞬间弹出；锁屏时需解锁后填写。运行记录和填写内容不包含在分享包中。
+```powershell
+python scripts/quota_watcher.py --self-test
+python scripts/test_watcher.py
+python scripts/test_backup.py
+python scripts/test_live_status.py
+```
+
+这些测试使用临时目录和模拟响应，不会向真实任务发送消息。Windows CI 运行相同测试。测试通过不等于已完成真实额度恢复验收。
+
+## English
+
+Windows-only beta: a local primary watcher and an independent App Server-based backup resume Codex tasks stopped by explicit quota errors when live quota becomes available. Monitoring makes no model calls; resumed work uses normal Codex quota. Requires Python, Pillow and a compatible signed-in Codex CLI. No guaranteed recovery; experimental APIs may change. See the commands above for installation, lifecycle controls and offline tests.
+
+MIT licensed. This is an independent community project, not an official OpenAI product.

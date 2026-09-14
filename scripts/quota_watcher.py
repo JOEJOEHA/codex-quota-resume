@@ -12,6 +12,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import codex_status
 
 
 APP_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "CodexQuotaWatcher"
@@ -19,12 +20,12 @@ STATE_PATH = APP_DIR / "state.json"
 CACHE_PATH = APP_DIR / "session-cache.json"
 SESSION_CACHE = {}
 LOG_PATH = APP_DIR / "watcher.log"
-SESSIONS_DIR = Path.home() / ".codex" / "sessions"
+SESSIONS_DIR = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "sessions"
 CODEX_EXE = Path(os.environ.get("LOCALAPPDATA", "")) / "OpenAI/Codex/bin"
 UUID_RE = re.compile(r"([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})", re.I)
-IDLE_SECONDS = 120
+IDLE_SECONDS = 0
 RETRY_SECONDS = 300
-RESUME_DELAY_SECONDS = 300
+RESUME_DELAY_SECONDS = 0
 COMPLETE_MARKER = '[QUOTA_RESUME_GOAL_COMPLETE]'
 RESUME_MESSAGE = (
     "额度已恢复。继续完成原任务目标，以最新用户要求为准；读取 PROGRESS.md 和实际文件，"
@@ -50,29 +51,19 @@ def write_plan(path: Path, value: dict) -> None:
 
 
 def plan_dialog(thread: str) -> None:
-    import tkinter as tk
-    from tkinter import messagebox
-    path = plan_path(thread)
-    old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
-    root = tk.Tk()
-    root.title('续跑后还想跑什么任务')
-    root.geometry('640x430')
-    tk.Label(root, text='续跑后还想跑什么任务', font=('Microsoft YaHei UI', 18)).pack(pady=12)
-    tk.Label(root, text='对应任务：' + thread + '\n原任务验收完成后才发送；保存不消耗 Codex 额度。').pack()
-    editor = tk.Text(root, wrap='word', font=('Microsoft YaHei UI', 11))
-    editor.pack(fill='both', expand=True, padx=16, pady=12)
-    if old.get('status') == 'saved':
-        editor.insert('1.0', old.get('text', ''))
-    def save():
-        text = editor.get('1.0', 'end').strip()
-        if not text:
-            messagebox.showinfo('请输入需求', '填写希望原任务完成后执行的需求。')
-            return
-        write_plan(path, {'threadId': thread, 'text': text, 'status': 'saved', 'savedAt': time.time()})
-        root.destroy()
-    tk.Button(root, text='保存后续任务', command=save).pack(side='left', padx=16, pady=12)
-    tk.Button(root, text='暂不安排', command=root.destroy).pack(side='right', padx=16, pady=12)
-    root.mainloop()
+    from plan_dialog import show
+    show(thread, plan_path(thread), write_plan)
+
+
+def dispatch(thread: str, text: str, images=(), cwd=None):
+    """Start the saved task, including when the desktop has not loaded it."""
+    command = [find_codex(), 'exec', 'resume', '--skip-git-repo-check', '--json', thread, text]
+    for image in images:
+        command.extend(['--image', image])
+    return subprocess.run(command, cwd=cwd, stdin=subprocess.DEVNULL,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                          text=True, encoding='utf-8', errors='replace',
+                          creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
 
 
 def offer_plan(pending: dict, state: dict) -> None:
@@ -107,11 +98,21 @@ def deliver_plan(active: dict, dry_run: bool) -> str | None:
         return 'followup-waiting-completion'
     if dry_run:
         return 'followup-ready'
-    # An uncertain queue result must not silently duplicate a new user task.
+    if not codex_status.available(find_codex()):
+        return 'followup-waiting-quota'
+    if any(not Path(image).is_file() for image in plan.get('images', [])):
+        return 'followup-missing-image'
+    # Persist before dispatch so interrupted runs never duplicate a user task.
     plan['status'] = 'sending'
     write_plan(path, plan)
-    result = subprocess.run([find_codex(), 'queue', '--thread', active['threadId'], '--message', plan['text']],
-                            capture_output=True, text=True, timeout=60)
+    try:
+        result = dispatch(active['threadId'], plan['text'] or '请根据附图完成我的需求。',
+                          plan.get('images', []), active.get('cwd'))
+    except OSError as error:
+        plan['status'] = 'send-failed'
+        write_plan(path, plan)
+        log(f"followup {plan['status']} thread={active['threadId']} {type(error).__name__}")
+        return 'followup-' + plan['status']
     plan['status'] = 'sent' if result.returncode == 0 else 'send-failed'
     write_plan(path, plan)
     return 'followup-' + plan['status']
@@ -164,16 +165,21 @@ def parse_session(path: Path) -> dict | None:
     open_turn = None
     latest_limits = None
     quota_error = False
+    quota_message = ''
+    quota_at = None
+    cwd = None
     try:
         with path.open(encoding="utf-8") as stream:
             for line in stream:
                 record = json.loads(line)
                 payload = record.get("payload", {})
+                if record.get('type') == 'session_meta':
+                    cwd = payload.get('cwd')
                 event = payload.get("type")
                 if event == "task_started":
                     open_turn = payload.get("turn_id")
-                    latest_limits = None
                     quota_error = False
+                    quota_message = ''
                 elif event == "token_count" and open_turn:
                     new_limits = payload.get("rate_limits") or {}
                     if latest_limits:
@@ -186,6 +192,9 @@ def parse_session(path: Path) -> dict | None:
                     if not payload.get("turn_id") or payload.get("turn_id") == open_turn:
                         error = payload.get("error") or {}
                         quota_error = error.get("codex_error_info") == "usage_limit_exceeded"
+                        quota_message = error.get('message', '') if quota_error else ''
+                        if quota_error and record.get('timestamp'):
+                            quota_at = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00')).timestamp()
                         if not quota_error:
                             open_turn = None
                             latest_limits = None
@@ -200,7 +209,10 @@ def parse_session(path: Path) -> dict | None:
         "turnId": open_turn,
         "limits": latest_limits,
         "quotaError": quota_error,
+        "quotaMessage": quota_message,
+        "quotaAt": quota_at,
         "path": str(path),
+        "cwd": cwd,
         "modifiedAt": path.stat().st_mtime,
     } if open_turn else None
 
@@ -209,23 +221,16 @@ def exhausted_candidate(path: Path, now: float) -> dict | None:
     current = inspect_session(path)
     if not current or not current["quotaError"] or now - current["modifiedAt"] < IDLE_SECONDS:
         return None
-    limits = current.get("limits") or {}
-    exhausted = []
-    for name in ("primary", "secondary"):
-        window = limits.get(name) or {}
-        if (window.get("used_percent") or 0) >= 100 and window.get("resets_at"):
-            exhausted.append(int(window["resets_at"]))
-    if not exhausted or not current.get("threadId"):
+    if not current.get('threadId'):
         return None
-    current["resetAt"] = max(exhausted)
-    current["dueAt"] = current["resetAt"] + RESUME_DELAY_SECONDS
-    current["key"] = f'{current["threadId"]}|{current["turnId"]}|{current["resetAt"]}'
+    current['key'] = current['threadId']+'|'+current['turnId']
     return current
 
 
-def latest_candidate(now: float, sent: dict) -> dict | None:
+def latest_candidate(now: float, sent: dict, since=0) -> dict | None:
     files = SESSIONS_DIR.rglob("*.jsonl")
-    candidates = [candidate for path in files if (candidate := exhausted_candidate(path, now)) and candidate["key"] not in sent]
+    candidates = [candidate for path in files if (candidate := exhausted_candidate(path, now))
+                  and candidate['key'] not in sent and (candidate.get('quotaAt') or candidate['modifiedAt']) >= since]
     return max(candidates, key=lambda item: item["modifiedAt"], default=None)
 
 
@@ -236,7 +241,69 @@ def find_codex() -> str:
     return shutil.which("codex") or ("codex.exe" if os.name == "nt" else "codex")
 
 
-def run(now: float | None = None, dry_run: bool = False) -> str:
+def resume_process_exists(thread: str) -> bool:
+    """Check for a child left running after its monitor process exited."""
+    result = subprocess.run(
+        ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+         'Get-CimInstance Win32_Process -Filter "Name=\'codex.exe\'" -ErrorAction Stop | '
+         'Select-Object -ExpandProperty CommandLine | ConvertTo-Json -Compress'],
+        capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=20,
+        creationflags=subprocess.CREATE_NO_WINDOW)
+    if result.returncode:
+        raise OSError('Cannot verify running Codex processes')
+    commands = json.loads(result.stdout) if result.stdout.strip() else []
+    if commands is None:
+        return True
+    if isinstance(commands, str):
+        commands = [commands]
+    return any(command is None or thread in command for command in commands)
+
+
+def recover_unstarted(state: dict, now: float) -> None:
+    active = state.get('activeDispatch')
+    if not active or now - state.get('sent', {}).get(active['key'], now) < 600:
+        return
+    current = exhausted_candidate(Path(active['path']), now)
+    if not current or current['key'] != active['key'] or resume_process_exists(active['threadId']):
+        return
+    # Still the same quota-stopped turn, no monitor lock owner or live Codex child.
+    state['sent'].pop(active['key'], None)
+    state['activeDispatch'] = None
+    state['pending'] = current
+    save_state(state)
+    log(f"backup recovering unstarted thread={active['threadId']}")
+
+
+def run_once(dry_run=False, backup=False) -> str:
+    import msvcrt
+    global SESSION_CACHE
+    APP_DIR.mkdir(parents=True, exist_ok=True)
+    with (APP_DIR / 'monitor.lock').open('a+b') as lock:
+        if lock.seek(0, 2) == 0:
+            lock.write(b'0'); lock.flush()
+        lock.seek(0)
+        try:
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            return 'monitor-busy'
+        # Closing this file also releases the OS lock after a crash or reboot.
+        try:
+            SESSION_CACHE = json.loads(CACHE_PATH.read_text(encoding='utf-8'))
+        except (FileNotFoundError, json.JSONDecodeError):
+            SESSION_CACHE = {}
+        if backup and not dry_run:
+            recover_unstarted(load_state(), time.time())
+        result = run(dry_run=dry_run, backup=backup)
+        state = load_state()
+        if state.get('status') != result:
+            log(result)
+        state.update(status=result, lastCheckedAt=time.time(), lastMonitor='backup' if backup else 'primary')
+        save_state(state)
+        CACHE_PATH.write_text(json.dumps(SESSION_CACHE), encoding='utf-8')
+        return result
+
+
+def run(now: float | None = None, dry_run: bool = False, backup: bool = False) -> str:
     now = time.time() if now is None else now
     state = load_state()
 
@@ -253,7 +320,7 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
             return "dispatch-active"
         state["activeDispatch"] = None
 
-    pending = state.get("pending")
+    pending = None if backup else state.get("pending")
     if pending:
         refreshed = exhausted_candidate(Path(pending["path"]), now)
         if not refreshed or refreshed["key"] != pending["key"]:
@@ -264,7 +331,8 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
             state["pending"] = pending
 
     if not pending:
-        pending = latest_candidate(now, state.get("sent", {}))
+        pending = (codex_status.backup_candidate(find_codex(), state.get('sent', {}), state.get('monitoringSince', 0)) if backup
+                   else latest_candidate(now, state.get('sent', {}), state.get('monitoringSince', 0)))
         state["pending"] = pending
 
     if not pending:
@@ -274,11 +342,16 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
         state["pending"] = None
         save_state(state)
         return "already-sent"
-    if now < pending["dueAt"]:
+    readiness = codex_status.ready(find_codex(), pending)
+    if readiness == 'task-changed':
+        state['pending'] = None
+        save_state(state)
+        return readiness
+    if readiness == 'waiting-quota':
         if not dry_run:
             offer_plan(pending, state)
         save_state(state)
-        return "waiting-reset"
+        return "waiting-quota"
     if dry_run:
         save_state(state)
         return f'dry-run-due:{pending["threadId"]}'
@@ -287,25 +360,30 @@ def run(now: float | None = None, dry_run: bool = False) -> str:
     if last_attempt.get("key") == pending["key"] and now - last_attempt.get("at", 0) < RETRY_SECONDS:
         return "retry-backoff"
     state["lastAttempt"] = {"key": pending["key"], "at": now}
-    save_state(state)
-
-    result = subprocess.run(
-        [find_codex(), "queue", "--thread", pending["threadId"], "--message", RESUME_MESSAGE],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if result.returncode:
-        log(f'queue failed thread={pending["threadId"]} code={result.returncode} {result.stderr[-300:]}')
-        return "queue-failed"
-
-    state = load_state()
+    # Persist before starting: a process exit may happen after acceptance.
     state.setdefault("sent", {})[pending["key"]] = now
     state["activeDispatch"] = pending
     state["pending"] = None
+    state['status'] = 'resuming'
+    state['lastCheckedAt'] = now
     save_state(state)
-    log(f'queued thread={pending["threadId"]} turn={pending["turnId"]}')
-    return "queued"
+
+    try:
+        result = dispatch(pending['threadId'], RESUME_MESSAGE, cwd=pending.get('cwd'))
+    except OSError as error:
+        result = None
+        log(f'resume could not start thread={pending["threadId"]}: {error}')
+    if result is None or result.returncode:
+        if result is not None:
+            log(f'resume failed thread={pending["threadId"]} code={result.returncode} {result.stderr[-300:]}')
+        state['sent'].pop(pending['key'], None)
+        state['activeDispatch'] = None
+        state['pending'] = pending
+        save_state(state)
+        return "resume-failed"
+
+    log(f'resumed thread={pending["threadId"]} turn={pending["turnId"]}')
+    return "resumed"
 
 
 def self_test() -> None:
@@ -336,7 +414,7 @@ def self_test() -> None:
              }}}) + "\n")
         os.utime(path, (now - 300, now - 300))
         candidate = exhausted_candidate(path, now)
-        assert candidate and candidate["turnId"] == "turn-1" and candidate["dueAt"] == now - 300
+        assert candidate and candidate["turnId"] == "turn-1" and candidate['quotaError']
 
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"payload": {"type": "task_started", "turn_id": "turn-2"}}) + "\n")
@@ -354,6 +432,7 @@ if __name__ == "__main__":
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--status", action="store_true")
+    parser.add_argument("--backup", action="store_true")
     parser.add_argument("--plan", metavar='THREAD_ID')
     args = parser.parse_args()
     try:
@@ -364,17 +443,7 @@ if __name__ == "__main__":
         elif args.self_test:
             self_test()
         else:
-            try:
-                SESSION_CACHE = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-            except (FileNotFoundError, json.JSONDecodeError):
-                pass
-            result = run(dry_run=args.dry_run)
-            state = load_state()
-            if state.get("status") != result:
-                log(result)
-            state.update(status=result, lastCheckedAt=time.time())
-            save_state(state)
-            CACHE_PATH.write_text(json.dumps(SESSION_CACHE), encoding="utf-8")
+            result = run_once(dry_run=args.dry_run, backup=args.backup)
             if sys.stdout is not None and not sys.stdout.closed:
                 print(result)
     except Exception as error:
