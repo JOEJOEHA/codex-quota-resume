@@ -9,3 +9,7 @@ followups/
 *.zip
 .env
 auth.json
+
+build/
+dist/
+*.spec

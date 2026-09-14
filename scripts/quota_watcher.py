@@ -50,9 +50,18 @@ def write_plan(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def plan_dialog(thread: str) -> None:
+def plan_dialog(thread: str, key=None) -> None:
     from plan_dialog import show
-    show(thread, plan_path(thread), write_plan)
+    ready_path = APP_DIR / 'followups' / (thread + '.ready.json')
+    show(thread, plan_path(thread), write_plan,
+         lambda: write_plan(ready_path, {'key': key, 'visibleAt': time.time()}))
+
+
+def self_command(*args):
+    if getattr(sys, 'frozen', False):
+        return [sys.executable, *args]
+    pythonw = Path(sys.executable).with_name('pythonw.exe')
+    return [str(pythonw if pythonw.exists() else sys.executable), str(Path(__file__).resolve()), *args]
 
 
 def dispatch(thread: str, text: str, images=(), cwd=None):
@@ -60,20 +69,46 @@ def dispatch(thread: str, text: str, images=(), cwd=None):
     command = [find_codex(), 'exec', 'resume', '--skip-git-repo-check', '--json', thread, text]
     for image in images:
         command.extend(['--image', image])
-    return subprocess.run(command, cwd=cwd, stdin=subprocess.DEVNULL,
+    result = subprocess.run(command, cwd=cwd, stdin=subprocess.DEVNULL,
                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                           text=True, encoding='utf-8', errors='replace',
                           creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    if result.returncode and 'already has an active writer' in result.stderr:
+        # The desktop owns this task: let its existing writer receive the message.
+        command = [find_codex(), 'queue', '--thread', thread, '--message', text]
+        for image in images:
+            command.extend(['--image', image])
+        result = subprocess.run(command, cwd=cwd, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                encoding='utf-8', errors='replace',
+                                creationflags=subprocess.CREATE_NO_WINDOW)
+        result.queued = result.returncode == 0
+    return result
 
 
 def offer_plan(pending: dict, state: dict) -> None:
     if pending['key'] in state.get('offeredPlans', []):
         return
-    pythonw = Path(sys.executable).with_name('pythonw.exe')
-    subprocess.Popen([str(pythonw if pythonw.exists() else sys.executable), str(Path(__file__).resolve()),
-                      '--plan', pending['threadId']])
-    state.setdefault('offeredPlans', []).append(pending['key'])
-    save_state(state)
+    startup = subprocess.STARTUPINFO()
+    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup.wShowWindow = 1
+    process = subprocess.Popen(self_command('--plan', pending['threadId'], '--plan-key', pending['key']),
+                               startupinfo=startup,
+                               env={**os.environ, 'PYINSTALLER_RESET_ENVIRONMENT': '1'})
+    ready_path = APP_DIR / 'followups' / (pending['threadId'] + '.ready.json')
+    for _ in range(150):
+        try:
+            shown = json.loads(ready_path.read_text(encoding='utf-8'))
+            if shown.get('key') == pending['key']:
+                state.setdefault('offeredPlans', []).append(pending['key'])
+                save_state(state)
+                return
+        except (OSError, ValueError):
+            pass
+        if process.poll() is not None:
+            break
+        time.sleep(0.1)
+    log('popup-unconfirmed: no visible-window acknowledgement')
 
 
 def deliver_plan(active: dict, dry_run: bool) -> str | None:
@@ -261,6 +296,8 @@ def resume_process_exists(thread: str) -> bool:
 
 def recover_unstarted(state: dict, now: float) -> None:
     active = state.get('activeDispatch')
+    if active and active.get('deliveryMode') == 'queued':
+        return  # Accepted by the desktop queue; never add a second copy.
     if not active or now - state.get('sent', {}).get(active['key'], now) < 600:
         return
     current = exhausted_candidate(Path(active['path']), now)
@@ -382,6 +419,11 @@ def run(now: float | None = None, dry_run: bool = False, backup: bool = False) -
         save_state(state)
         return "resume-failed"
 
+    if getattr(result, 'queued', False):
+        state['activeDispatch']['deliveryMode'] = 'queued'
+        save_state(state)
+        log(f'queued; awaiting observed start thread={pending["threadId"]}')
+        return 'queued-awaiting-start'
     log(f'resumed thread={pending["threadId"]} turn={pending["turnId"]}')
     return "resumed"
 
@@ -434,10 +476,11 @@ if __name__ == "__main__":
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--backup", action="store_true")
     parser.add_argument("--plan", metavar='THREAD_ID')
+    parser.add_argument("--plan-key")
     args = parser.parse_args()
     try:
         if args.plan:
-            plan_dialog(args.plan)
+            plan_dialog(args.plan, args.plan_key)
         elif args.status:
             print(json.dumps(load_state(), ensure_ascii=False, indent=2))
         elif args.self_test:

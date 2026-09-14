@@ -8,20 +8,26 @@
 
 - 主监控每分钟检查，备用监控每五分钟独立检查。
 - 两层共用进程锁和发送记录，避免重复启动。
-- 通过 `codex exec resume` 继续原任务，不新建任务，不主动更改模型或购买额度。
+- 通过 `codex exec resume` 继续原任务；若桌面端已有写入者，使用 `codex queue` 交给现有桌面任务执行。入队后仍需观察启动，不把入队当作完成。不新建任务，不主动更改模型或购买额度。
 - 深色圆角后续任务输入框，支持选图、粘贴截图和 Windows 截图工具。
 - 监控查询不调用模型；真正续跑会正常消耗 Codex 额度。
 
-这是 **Python 本地程序 + Windows 计划任务 + Codex Skill**，不是独立桌面 EXE，也不是已上架的插件。
+提供 **Windows 本地 EXE + Windows 计划任务 + 可选 Codex Skill**。EXE 已包含 Python、Tkinter 和 Pillow，无需另外安装 Python。
+
+## 下载本地软件（推荐）
+
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.1/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.1)
+
+双击打开，点击 **启用 / 更新监控**。程序会安装到 `%LOCALAPPDATA%\CodexQuotaWatcher`，复用主备计划任务并创建桌面快捷方式。在软件中选择任务，再点“打开需求输入框”即可填写文字、加入截图。关闭主界面不会停止后台计划任务；暂停使用“暂停监控”。
 
 ## 环境要求
 
 - Windows 10/11；电脑开机、用户保持登录、网络可用。
-- Python 3.11+，包含 Tkinter；`python`、`pythonw` 可从终端调用。
-- Pillow 图片库。
+- 仅源码安装需要 Python 3.11+，包含 Tkinter；`python`、`pythonw` 可从终端调用。
+- 仅源码安装需要 Pillow 图片库。
 - 已登录的 Codex CLI，支持 `exec resume`、`app-server --stdio`、`account/rateLimits/read` 和 `thread/turns/list`。最后一项属于实验接口，Codex 更新可能影响兼容性。
 
-## 安装
+## 源码 / Skill 安装
 
 [下载可安装的技能包](https://github.com/JOEJOEHA/codex-quota-resume/raw/refs/heads/main/codex-quota-resume.zip) · [源代码](https://github.com/JOEJOEHA/codex-quota-resume)
 
@@ -66,7 +72,7 @@ python -m pip install -r requirements.txt
 额度中断时可填写后续任务。手动打开：
 
 ```powershell
-python "$env:LOCALAPPDATA\CodexQuotaWatcher\quota_watcher.py" --plan <任务UUID>
+& "$env:LOCALAPPDATA\CodexQuotaWatcher\CodexQuotaResume.exe" --plan <任务UUID>
 ```
 
 `Ctrl+V` 粘贴截图，`Ctrl+Enter` 保存。截图按钮打开 Windows 截图工具，截图后回到输入框粘贴。每个计划最多六张图片。
@@ -74,6 +80,8 @@ python "$env:LOCALAPPDATA\CodexQuotaWatcher\quota_watcher.py" --plan <任务UUID
 后续任务只有在被监控器恢复的原任务明确完成，并输出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后才发送；普通回合结束、取消或等待用户不会触发它。它不是通用任务队列。
 
 ## 数据与边界
+
+弹窗只有在窗口已显示并发回确认后才标记为已提示；启动失败会留下记录并在后续检查重试。
 
 程序读取本机 Codex 日志、官方本地 App Server 状态及当前账户额度，使用已有 Codex 登录。它不读取或上传登录令牌，不兑换重置券，不购买额度。保存的文字、截图和状态留在本机；实际发送任务及图片时会交给 Codex 按正常服务流程处理。
 
@@ -88,12 +96,23 @@ python scripts/quota_watcher.py --self-test
 python scripts/test_watcher.py
 python scripts/test_backup.py
 python scripts/test_live_status.py
+python scripts/test_popup.py
+python scripts/test_app.py
 ```
 
 这些测试使用临时目录和模拟响应，不会向真实任务发送消息。Windows CI 运行相同测试。测试通过不等于已完成真实额度恢复验收。
 
+## 构建 EXE
+
+```powershell
+python -m pip install -r requirements.txt pyinstaller
+& .\scripts\build_windows.ps1
+```
+
+生成 `dist/CodexQuotaResume.exe`。构建产物及运行记录不提交到源代码仓库。
+
 ## English
 
-Windows-only beta: a local primary watcher and an independent App Server-based backup resume Codex tasks stopped by explicit quota errors when live quota becomes available. Monitoring makes no model calls; resumed work uses normal Codex quota. Requires Python, Pillow and a compatible signed-in Codex CLI. No guaranteed recovery; experimental APIs may change. See the commands above for installation, lifecycle controls and offline tests.
+Windows-only beta: a local primary watcher and an independent App Server-based backup resume Codex tasks stopped by explicit quota errors when live quota becomes available. Monitoring makes no model calls; resumed work uses normal Codex quota. The EXE bundles Python and Pillow; a compatible signed-in Codex CLI is still required. No guaranteed recovery; experimental APIs may change. See the commands above for installation, lifecycle controls and offline tests.
 
 MIT licensed. This is an independent community project, not an official OpenAI product.

@@ -135,3 +135,16 @@ with tempfile.TemporaryDirectory() as d:
   write_records()
   assert w.run(now)=='no-quota-stall'
 print('STALE_99_PERCENT_OK: live quota permits resume even without reset time; success never resumes')
+
+with patch.object(w.subprocess, 'run', side_effect=[
+ SimpleNamespace(returncode=1,stderr='already has an active writer'),
+ SimpleNamespace(returncode=0,stderr='',stdout='Queued message')]) as send:
+ result=w.dispatch('00000000-0000-0000-0000-000000000001','test')
+ assert result.queued and send.call_count==2
+ assert send.call_args.args[0][1]=='queue'
+with patch.object(w.subprocess, 'run', return_value=SimpleNamespace(returncode=1,stderr='network failure')) as send:
+ assert w.dispatch('00000000-0000-0000-0000-000000000001','test').returncode==1
+ assert send.call_count==1
+with patch.object(w,'exhausted_candidate',side_effect=AssertionError('must not resend queued work')):
+ w.recover_unstarted({'activeDispatch':{'deliveryMode':'queued'}},2000000000)
+print('WRITER_CONFLICT_OK: route to desktop queue only for writer conflict; no queued replay')

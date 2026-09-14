@@ -10,7 +10,7 @@ from tkinter import filedialog, messagebox
 from PIL import Image, ImageGrab, ImageTk
 
 
-def show(thread, path, write_plan):
+def show(thread, path, write_plan, on_ready=None):
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     saved = old.get('status') == 'saved'
@@ -123,4 +123,13 @@ def show(thread, path, write_plan):
     root.bind('<Escape>', lambda e: root.destroy())
     refresh()
     editor.focus_set()
+    def reveal():
+        root.deiconify()
+        root.lift()
+        root.attributes('-topmost', True)
+        root.update_idletasks()
+        if on_ready and root.winfo_viewable():
+            on_ready()
+        root.after(5000, lambda: root.attributes('-topmost', False))
+    root.after(100, reveal)
     root.mainloop()
