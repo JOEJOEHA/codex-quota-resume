@@ -16,7 +16,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 import quota_watcher as w
-from window_ui import rounded_window, bind_drag
+from window_ui import rounded_window, bind_drag, window_controls
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -94,7 +94,7 @@ def install():
     run_command(['powershell.exe','-NoProfile','-NonInteractive','-Command',
                  "$p=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Codex Quota Resume.lnk';"
                  "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($p);"
-                 f"$s.TargetPath='{target}';$s.Save()"])
+                 f"$s.TargetPath='{target}';$s.IconLocation='{target},0';$s.Save()"])
     return '已启用主备监控，并创建桌面快捷方式。'
 
 
@@ -113,7 +113,7 @@ def show():
     top=tk.Frame(frame,bg='#292929');top.pack(fill='x',pady=(0,16))
     title=tk.Label(top,text='Codex 自动续跑',bg='#292929',fg='#eeeeee',font=('Microsoft YaHei UI',20))
     title.pack(side='left')
-    tk.Button(top,text='×',command=root.destroy,bg='#383838',fg='white',relief='flat',bd=0,font=font,padx=16,pady=8).pack(side='right')
+    window_controls(root,top,font)
     bind_drag(root,top,title)
     label('有额度就继续 · 本地监控 · 后续任务支持截图', '#aaaaaa')
     monitor_status=label('● 正在确认监控状态…','#aaaaaa',13)

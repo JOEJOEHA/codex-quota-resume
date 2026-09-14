@@ -8,7 +8,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageGrab, ImageTk
-from window_ui import rounded_window, bind_drag
+from window_ui import rounded_window, bind_drag, window_controls
 
 
 def show(thread, path, write_plan, on_ready=None):
@@ -30,7 +30,7 @@ def show(thread, path, write_plan, on_ready=None):
                          relief='flat', bd=0, padx=14, pady=8, cursor='hand2', font=font)
     top = tk.Frame(body, bg='#292929'); top.pack(fill='x')
     title = label(top, '续跑后还想跑什么任务', size=16); title.pack(side='left')
-    button(top, '×', root.destroy).pack(side='right')
+    window_controls(root,top,font)
     bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
     label(body, '任务 ' + thread, '#888888', 9).pack(anchor='w')

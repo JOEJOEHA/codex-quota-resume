@@ -1,7 +1,7 @@
 interface:
   display_name: "Codex 额度恢复续跑"
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
+  icon_small: "./assets/app-icon.png"
+  icon_large: "./assets/app-icon.png"
   short_description: "用本地零额度监控，在配额恢复后继续被中断的原任务"
   default_prompt: "使用 $codex-quota-resume，为我启用额度恢复后自动续跑：安装 Windows 本地主备监控，实时额度可用就继续明确因额度耗尽中断的原任务，并验证安装结果。"
 
