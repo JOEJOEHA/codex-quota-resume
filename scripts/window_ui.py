@@ -27,6 +27,9 @@ def configure_taskbar(root):
     style=user32.GetWindowLongW(hwnd,-20)
     user32.SetWindowLongW(hwnd,-20,(style | 0x40000) & ~0x80)
     user32.SetWindowPos(hwnd,None,0,0,0,0,0x37)
+    icon=Path(__file__).with_name('app-icon.ico')
+    if not icon.exists():icon=Path(__file__).parent.parent/'assets'/'app-icon.ico'
+    if icon.exists():root.iconbitmap(str(icon))
 
 
 def bind_drag(root, *widgets):
@@ -42,9 +45,6 @@ def bind_drag(root, *widgets):
 
 def rounded_window(root,width,height):
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
-    icon=Path(__file__).with_name('app-icon.ico')
-    if not icon.exists():icon=Path(__file__).parent.parent/'assets'/'app-icon.ico'
-    if icon.exists():root.iconbitmap(default=str(icon))
     root.overrideredirect(True)
     root.configure(bg='#010203')
     root.wm_attributes('-transparentcolor','#010203')

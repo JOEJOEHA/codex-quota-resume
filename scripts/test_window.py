@@ -7,6 +7,8 @@ window_controls(root,controls,('Segoe UI',11))
 assert [b.cget('text') for b in controls.winfo_children()]==['×','—']
 header=tk.Label(body,text='Drag');header.pack();bind_drag(root,header)
 root.update()
+ctypes.windll.user32.SendMessageW.restype=ctypes.c_void_p
+assert ctypes.windll.user32.SendMessageW(window_handle(root),0x7f,1,0)
 x,y=root.winfo_x(),root.winfo_y()
 header.event_generate('<ButtonPress-1>',rootx=x+10,rooty=y+10)
 header.event_generate('<B1-Motion>',rootx=x+130,rooty=y+90)
