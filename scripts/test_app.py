@@ -16,3 +16,12 @@ with tempfile.TemporaryDirectory() as folder:
   assert run.call_count==2 and (Path(folder)/'paused.flag').exists()
   assert all(c.args[0][-1]=='/DISABLE' for c in run.call_args_list)
 print('APP_TASKS_OK: XML escaping, interactive session, battery, unlimited execution, pause both layers')
+
+for states,expected in [(('true','true'),True),(('false','false'),False),(('true','false'),False)]:
+ with patch.object(app,'run_command',return_value='['+','.join(states)+']'):
+  text,color,enabled=app.monitor_indicator()
+  assert enabled is expected
+  if expected:assert color=='#43c77a'
+with patch.object(app,'run_command',side_effect=RuntimeError('unavailable')):
+ assert app.monitor_indicator()[2] is False
+print('MONITOR_INDICATOR_OK: green only when both real tasks are enabled; paused, partial and unknown stay non-green')

@@ -8,6 +8,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageGrab, ImageTk
+from window_ui import rounded_window, bind_drag
 
 
 def show(thread, path, write_plan, on_ready=None):
@@ -17,23 +18,12 @@ def show(thread, path, write_plan, on_ready=None):
     attachments = list(old.get('images', [])) if saved else []
     root = tk.Tk()
     root.title('续跑后还想跑什么任务')
-    root.overrideredirect(True)
-    root.configure(bg='#010203')
-    root.wm_attributes('-transparentcolor', '#010203')
-    width, height = 860, 580
-    root.geometry(f'{width}x{height}+{(root.winfo_screenwidth()-width)//2}+{(root.winfo_screenheight()-height)//2}')
-    canvas = tk.Canvas(root, bg='#010203', highlightthickness=0)
-    canvas.pack(fill='both', expand=True)
-    r = 48
-    canvas.create_polygon(r, 1, width-r, 1, width-1, 1, width-1, r,
-                          width-1, height-r, width-1, height-1, width-r, height-1,
-                          r, height-1, 1, height-1, 1, height-r, 1, r, 1, 1,
-                          smooth=True, fill='#292929', outline='#414141', width=1)
-    body = tk.Frame(canvas, bg='#292929')
-    canvas.create_window(24, 20, anchor='nw', width=width-48, height=height-40, window=body)
+    body = rounded_window(root, 860, 580)
     font = ('Microsoft YaHei UI', 11)
     def label(parent, text, color='#eeeeee', size=11):
-        return tk.Label(parent, text=text, bg='#292929', fg=color, font=('Microsoft YaHei UI', size))
+        item = tk.Label(parent, text=text, bg='#292929', fg=color, font=('Microsoft YaHei UI', size))
+        bind_drag(root, item)
+        return item
     def button(parent, text, command, accent=False):
         return tk.Button(parent, text=text, command=command, bg='#2864cb' if accent else '#383838',
                          fg='white', activebackground='#454545', activeforeground='white',
@@ -41,9 +31,7 @@ def show(thread, path, write_plan, on_ready=None):
     top = tk.Frame(body, bg='#292929'); top.pack(fill='x')
     title = label(top, '续跑后还想跑什么任务', size=16); title.pack(side='left')
     button(top, '×', root.destroy).pack(side='right')
-    drag = [0, 0]
-    title.bind('<Button-1>', lambda e: drag.__setitem__(slice(None), [e.x_root-root.winfo_x(), e.y_root-root.winfo_y()]))
-    title.bind('<B1-Motion>', lambda e: root.geometry(f'+{e.x_root-drag[0]}+{e.y_root-drag[1]}'))
+    bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
     label(body, '任务 ' + thread, '#888888', 9).pack(anchor='w')
     bottom = tk.Frame(body, bg='#292929'); bottom.pack(side='bottom', fill='x', pady=(12, 0))

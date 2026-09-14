@@ -28,6 +28,7 @@ if ($LASTEXITCODE -ne 0) {
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 Copy-Item -LiteralPath $source -Destination $installed -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "plan_dialog.py") -Destination $installDir -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "window_ui.py") -Destination $installDir -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "codex_status.py") -Destination $installDir -Force
 Set-Content -LiteralPath (Join-Path $installDir 'session-cache.json') -Value '{}' -Encoding utf8
 & $python -X utf8 -c "import sys,time;sys.path.insert(0,sys.argv[1]);import quota_watcher as w;s=w.load_state();s.setdefault('monitoringSince',time.time());w.save_state(s)" $installDir

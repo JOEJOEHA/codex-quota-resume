@@ -16,6 +16,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 import quota_watcher as w
+from window_ui import rounded_window, bind_drag
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -57,12 +58,26 @@ def pause():
     return '已暂停后续调度；正在执行的任务不受影响。'
 
 
+def monitor_indicator():
+    try:
+        command="$ErrorActionPreference='Stop';$s=New-Object -ComObject Schedule.Service;$s.Connect();"
+        command+="@('Codex Quota Resume Watcher','Codex Quota Resume Backup') | ForEach-Object {$s.GetFolder('\\').GetTask($_).Enabled} | ConvertTo-Json -Compress"
+        enabled=json.loads(run_command(['powershell.exe','-NoProfile','-NonInteractive','-Command',command]))
+        if not isinstance(enabled,list) or len(enabled)!=2 or any(type(x) is not bool for x in enabled):
+            raise ValueError('Unknown task state')
+        if all(enabled):return ('● 监控已启用（主备）','#43c77a',True)
+        if not any(enabled):return ('● 监控已暂停','#999999',False)
+        return ('● 监控未全部启用','#e5b454',False)
+    except (RuntimeError,ValueError,ET.ParseError,OSError):
+        return ('● 未启用或无法确认监控状态','#e5b454',False)
+
+
 def install():
     if not getattr(sys,'frozen',False):
         raise RuntimeError('请使用打包后的 EXE 启用后台监控，源码用户运行 install_windows.ps1。')
     w.codex_status.available(w.find_codex())
     w.APP_DIR.mkdir(parents=True,exist_ok=True)
-    destination=w.APP_DIR/'CodexQuotaResume.exe'
+    destination=w.APP_DIR/Path(sys.executable).name
     if Path(sys.executable).resolve()!=destination.resolve():
         shutil.copy2(sys.executable,destination)
     state=w.load_state()
@@ -87,28 +102,25 @@ def show():
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
-    root.geometry('820x640')
-    root.minsize(720,620)
-    root.configure(bg='#191919')
-    root.update_idletasks()
-    hwnd=ctypes.windll.user32.GetParent(root.winfo_id())
-    dark=ctypes.c_int(1); corners=ctypes.c_int(2)
-    ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd,20,ctypes.byref(dark),4)
-    ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd,33,ctypes.byref(corners),4)
+    frame=rounded_window(root,860,680)
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TCombobox',fieldbackground='#303030',background='#383838',foreground='white',padding=8)
     style.map('TCombobox',fieldbackground=[('readonly','#303030')],foreground=[('readonly','white')])
     font=('Microsoft YaHei UI',11)
-    frame=tk.Frame(root,bg='#191919');frame.pack(fill='both',expand=True,padx=28,pady=24)
     def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#191919',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left')
-        item.pack(fill='x',pady=(0,10));return item
-    label('Codex 自动续跑',size=22)
+        item=tk.Label(frame,text=text,bg='#292929',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left')
+        item.pack(fill='x',pady=(0,10));bind_drag(root,item);return item
+    top=tk.Frame(frame,bg='#292929');top.pack(fill='x',pady=(0,16))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#292929',fg='#eeeeee',font=('Microsoft YaHei UI',20))
+    title.pack(side='left')
+    tk.Button(top,text='×',command=root.destroy,bg='#383838',fg='white',relief='flat',bd=0,font=font,padx=16,pady=8).pack(side='right')
+    bind_drag(root,top,title)
     label('有额度就继续 · 本地监控 · 后续任务支持截图', '#aaaaaa')
+    monitor_status=label('● 正在确认监控状态…','#aaaaaa',13)
     status=label('正在读取运行状态…',size=14)
     detail=label('', '#aaaaaa',10)
     note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#aaaaaa',10)
-    actions=tk.Frame(frame,bg='#191919');actions.pack(fill='x',pady=(2,18))
+    actions=tk.Frame(frame,bg='#292929');actions.pack(fill='x',pady=(2,18))
     results=queue.Queue();busy=[False];threads=[]
     def background(job):
         if busy[0]:return
@@ -121,7 +133,7 @@ def show():
         b=tk.Button(parent,text=text,command=command,bg='#2864cb' if blue else '#333333',fg='white',
                     activebackground='#454545',activeforeground='white',relief='flat',font=font,padx=14,pady=10)
         b.pack(side='left',padx=(0,10));return b
-    button(actions,'启用 / 更新监控',lambda:background(install),True)
+    enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
     button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
@@ -140,7 +152,7 @@ def show():
         startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=1
         subprocess.Popen(command,startupinfo=startup,
                          env={**os.environ,'PYINSTALLER_RESET_ENVIRONMENT':'1'})
-    plan_actions=tk.Frame(frame,bg='#191919');plan_actions.pack(fill='x')
+    plan_actions=tk.Frame(frame,bg='#292929');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
     label('后续需求会在监控器恢复的原任务完成后发送。', '#999999',10)
@@ -155,21 +167,36 @@ def show():
         state=w.load_state();code=state.get('status','not-installed')
         stamp=state.get('lastCheckedAt')
         status.configure(text=names.get(code,'尚未启用监控' if code=='not-installed' else code))
-        if (w.APP_DIR/'paused.flag').exists():status.configure(text='监控已暂停')
         detail.configure(text=('最近检查 '+time.strftime('%m-%d %H:%M:%S',time.localtime(stamp)) if stamp else '尚无检查记录')+'  ·  '+{'primary':'主监控','backup':'备用监控'}.get(state.get('lastMonitor'),''))
         try:
-            kind,value=results.get_nowait();busy[0]=False
-            if kind=='error':
+            kind,value=results.get_nowait()
+            if kind=='monitor':
+                text,color,enabled=value
+                monitor_status.configure(text=text,fg=color)
+                enable_button.configure(text='● 监控已启用' if enabled else '启用 / 更新监控',
+                                        bg='#21854d' if enabled else '#2864cb')
+            elif kind=='error':
+                busy[0]=False
                 note.configure(text='操作失败，详情已显示');messagebox.showerror('操作失败',value,parent=root)
             elif isinstance(value,list):
+                busy[0]=False
                 threads[:]=value
                 select['values']=[(x.get('name') or x.get('preview') or x['id']).replace('\n',' ')[:65] for x in value]
                 if threads:select.current(0)
                 note.configure(text='任务列表已更新。')
-            else:note.configure(text=value.strip() or '操作完成。')
+            else:
+                busy[0]=False
+                note.configure(text=value.strip() or '操作完成。')
+                threading.Thread(target=lambda:results.put(('monitor',monitor_indicator())),daemon=True).start()
         except queue.Empty:pass
         root.after(1000,tick)
-    tick();load_threads();root.lift()
+    def refresh_monitor():
+        while True:
+            results.put(('monitor',monitor_indicator()))
+            time.sleep(5)
+    tick();load_threads()
+    threading.Thread(target=refresh_monitor,daemon=True).start()
+    root.lift()
     root.mainloop()
 
 

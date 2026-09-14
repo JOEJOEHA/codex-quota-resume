@@ -16,7 +16,9 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.1/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.1)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.2/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.2)
+
+主界面与输入框采用统一深色圆角外观，可拖动标题栏或空白边缘移动窗口。绿色圆点和绿色按钮代表主备监控均已启用，灰色表示暂停，黄色表示未全部启用或无法确认；状态每五秒读取实际计划任务。
 
 双击打开，点击 **启用 / 更新监控**。程序会安装到 `%LOCALAPPDATA%\CodexQuotaWatcher`，复用主备计划任务并创建桌面快捷方式。在软件中选择任务，再点“打开需求输入框”即可填写文字、加入截图。关闭主界面不会停止后台计划任务；暂停使用“暂停监控”。
 
