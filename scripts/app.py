@@ -102,16 +102,16 @@ def show():
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
-    frame=rounded_window(root,860,680)
+    frame=rounded_window(root,430,680)
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TCombobox',fieldbackground='#2b2b2b',background='#2b2b2b',bordercolor='#383838',lightcolor='#383838',darkcolor='#383838',arrowcolor='#aaaaaa',foreground='white',padding=8)
     style.map('TCombobox',fieldbackground=[('readonly','#2b2b2b')],foreground=[('readonly','white')])
     font=('Microsoft YaHei UI',11)
     def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left')
+        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left',wraplength=374)
         item.pack(fill='x',pady=(0,10));bind_drag(root,item);return item
     top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,16))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',20))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
     title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root,top,title)
@@ -130,8 +130,8 @@ def show():
             except Exception as error:results.put(('error',str(error)))
         threading.Thread(target=work,daemon=True).start()
     def button(parent,text,command,blue=False):
-        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=font)
-        b.pack(side='left',padx=(0,10));return b
+        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=('Microsoft YaHei UI',10),padx=10)
+        b.pack(side='left',padx=(0,6));return b
     enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
     button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
