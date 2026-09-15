@@ -16,7 +16,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 import quota_watcher as w
-from window_ui import rounded_window, bind_drag, window_controls, RoundedButton
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -104,8 +104,10 @@ def show():
     root.title('Codex Quota Resume')
     frame=rounded_window(root,430,535)
     style=ttk.Style(root); style.theme_use('clam')
-    style.configure('TCombobox',fieldbackground='#2b2b2b',background='#2b2b2b',bordercolor='#383838',lightcolor='#383838',darkcolor='#383838',arrowcolor='#aaaaaa',foreground='white',padding=8)
-    style.map('TCombobox',fieldbackground=[('readonly','#2b2b2b')],foreground=[('readonly','white')])
+    style.configure('TScrollbar',background='#383838',troughcolor='#242424',
+                    bordercolor='#242424',arrowcolor='#aaaaaa',lightcolor='#383838',darkcolor='#383838')
+    style.map('TScrollbar',background=[('active','#494949')])
+
     font=('Microsoft YaHei UI',11)
     def label(text,color='#eeeeee',size=11):
         item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left',wraplength=374)
@@ -136,7 +138,7 @@ def show():
     button(actions,'暂停监控',lambda:background(pause))
     button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
-    select=ttk.Combobox(frame,state='readonly',font=font);select.pack(fill='x',pady=(0,12))
+    select=TaskPicker(frame,font=font);select.pack(fill='x',pady=(0,12))
     def get_threads():
         with w.codex_status.connection(w.find_codex()) as request:
             data=request('thread/list',{'limit':30,'sortKey':'updated_at','sortDirection':'desc'})['data']
@@ -179,7 +181,7 @@ def show():
             elif isinstance(value,list):
                 busy[0]=False
                 threads[:]=value
-                select['values']=[(x.get('name') or x.get('preview') or x['id']).replace('\n',' ')[:65] for x in value]
+                select.set_values([(x.get('name') or x.get('preview') or x['id']).replace('\n',' ')[:65] for x in value])
                 if threads:select.current(0)
                 note.configure(text='任务列表已更新。')
             else:

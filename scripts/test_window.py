@@ -1,5 +1,5 @@
 import tkinter as tk
-from window_ui import rounded_window,bind_drag,minimize,window_handle,window_controls,RoundedButton
+from window_ui import rounded_window,bind_drag,minimize,window_handle,window_controls,RoundedButton,TaskPicker
 import ctypes
 root=tk.Tk();body=rounded_window(root,500,320)
 controls=tk.Frame(body);controls.pack()
@@ -30,5 +30,12 @@ b.event_generate('<KeyPress-space>');b.event_generate('<KeyRelease-space>')
 ready=tk.BooleanVar();root.after(150,lambda:ready.set(True));root.wait_variable(ready)
 assert called==[True] and b.fill=='#21854d'
 assert b.surface.width()>0
+picker=TaskPicker(body,('Segoe UI',11));picker.pack(fill='x')
+picker.set_values(['first','second']);root.update();picker.toggle();root.update()
+assert picker.panel.winfo_ismapped()
+picker.listing.selection_clear(0,'end');picker.listing.selection_set(1);picker.choose()
+assert picker.current()==1
+picker.toggle();root.update();picker.listing.event_generate('<Escape>');root.update()
+assert not picker.panel.winfo_ismapped()
 root.destroy()
 print('WINDOW_CONTROLS_OK: minimize button, restore, drag and negative coordinates; only two controls')

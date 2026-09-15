@@ -52,6 +52,74 @@ class RoundedButton(tk.Button):
     config=configure
 
 
+class TaskPicker(tk.Frame):
+    """Task list using the same rounded surfaces as the composer."""
+    def __init__(self,parent,font):
+        super().__init__(parent,bg=parent.cget('bg'))
+        self.values=[]
+        self.index=-1
+        self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle)
+        self.button.pack(fill='x')
+        self.panel=tk.Canvas(parent,width=374,height=212,bg=parent.cget('bg'),highlightthickness=0)
+        self.panel.create_polygon(20,1,354,1,373,1,373,20,373,192,373,211,354,211,
+                                  20,211,1,211,1,192,1,20,1,1,smooth=True,
+                                  fill='#242424',outline='#383838')
+        interior=tk.Frame(self.panel,bg='#242424')
+        self.panel.create_window(10,10,anchor='nw',width=354,height=192,window=interior)
+        self.listing=tk.Listbox(interior,bg='#242424',fg='#eeeeee',selectbackground='#383838',
+                               selectforeground='white',font=font,relief='flat',bd=0,
+                               highlightthickness=0,exportselection=False,activestyle='none')
+        from tkinter import ttk
+        scroll=ttk.Scrollbar(interior,command=self.listing.yview)
+        scroll.pack(side='right',fill='y')
+        self.listing.configure(yscrollcommand=scroll.set)
+        self.listing.pack(fill='both',expand=True)
+        self.listing.bind('<ButtonRelease-1>',self.choose)
+        self.listing.bind('<Return>',self.choose)
+        self.listing.bind('<Escape>',lambda e:self.hide())
+        self.winfo_toplevel().bind('<Button-1>',self.dismiss,add='+')
+
+    def set_values(self,values):
+        self.values=list(values)
+        self.listing.delete(0,'end')
+        for value in self.values:self.listing.insert('end',value)
+        self.current(0 if self.values else -1)
+
+    def current(self,index=None):
+        if index is None:return self.index
+        self.index=index
+        text=self.values[index] if 0<=index<len(self.values) else '选择任务'
+        font=tkfont.Font(font=self.button.cget('font'))
+        while font.measure(text)>306:text=text[:-2]+'…'
+        self.button.configure(text=text+'  ▾')
+
+    def toggle(self):
+        if self.panel.winfo_ismapped():self.hide();return
+        self.panel.place(x=self.winfo_x(),y=max(0,self.winfo_y()-220))
+        tk.Misc.lift(self.panel)
+        self.listing.selection_clear(0,'end')
+        if self.index>=0:
+            self.listing.selection_set(self.index);self.listing.activate(self.index);self.listing.see(self.index)
+        self.listing.focus_set()
+
+    def hide(self):
+        self.panel.place_forget()
+        self.button.focus_set()
+
+    def choose(self,event=None):
+        selection=self.listing.curselection()
+        if selection:self.current(selection[0])
+        self.hide()
+        return 'break'
+
+    def dismiss(self,event):
+        widget=event.widget
+        while widget is not None:
+            if widget in (self,self.panel):return
+            widget=getattr(widget,'master',None)
+        if self.panel.winfo_ismapped():self.panel.place_forget()
+
+
 def window_handle(root):
     user32=ctypes.windll.user32
     user32.GetParent.restype=ctypes.c_void_p

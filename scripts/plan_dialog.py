@@ -147,16 +147,49 @@ def show(thread, path, write_plan, on_ready=None):
         except OSError as error:
             messagebox.showerror('保存失败', str(error), parent=root); return
         root.destroy()
-    add_button=button(bottom,'+ 添加',lambda:menu.tk_popup(add_button.winfo_rootx(),add_button.winfo_rooty()-48))
+    menu=tk.Canvas(body,width=160,height=110,bg='#181818',highlightthickness=0)
+    menu.create_polygon(20,1,140,1,159,1,159,20,159,90,159,109,140,109,
+                        20,109,1,109,1,90,1,20,1,1,smooth=True,
+                        fill='#242424',outline='#383838')
+    menu_body=tk.Frame(menu,bg='#242424')
+    menu.create_window(8,8,anchor='nw',width=144,height=94,window=menu_body)
+    def hide_menu():
+        menu.place_forget()
+    def select_attachment(command):
+        hide_menu();command()
+    menu_items=[]
+    for text,command in [('添加图片',choose),('添加文件',choose_files)]:
+        item=RoundedButton(menu_body,text=text,command=lambda c=command:select_attachment(c),
+                           bg='#242424',font=font,padx=30,pady=8)
+        item.pack(fill='x',pady=2)
+        item.bind('<Return>',lambda event:event.widget.invoke())
+        menu_items.append(item)
+    for index,item in enumerate(menu_items):
+        for key in ('<Up>','<Down>'):
+            item.bind(key,lambda event,i=index:(menu_items[1-i].focus_set(),'break')[-1])
+    def toggle_menu():
+        if menu.winfo_ismapped():hide_menu();return
+        menu.place(x=add_button.winfo_rootx()-body.winfo_rootx(),
+                   y=add_button.winfo_rooty()-body.winfo_rooty()-118)
+        tk.Misc.lift(menu)
+        if root.focus_get()==add_button:menu_items[0].focus_set()
+    add_button=button(bottom,'+ 添加',toggle_menu)
     add_button.pack(side='left')
-    menu=tk.Menu(root,tearoff=False,bg='#2b2b2b',fg='#eeeeee',activebackground='#365c91',activeforeground='white')
-    menu.add_command(label='添加图片',command=choose)
-    menu.add_command(label='添加文件',command=choose_files)
+    def dismiss_menu(event):
+        widget=event.widget
+        while widget is not None:
+            if widget in (menu,add_button):return
+            widget=getattr(widget,'master',None)
+        hide_menu()
+    root.bind('<Button-1>',dismiss_menu,add='+')
+    def escape(event):
+        if menu.winfo_ismapped():hide_menu();add_button.focus_set()
+        else:root.destroy()
     button(bottom, '截图', screenshot).pack(side='left', padx=8)
     button(bottom, '保存后续任务 ↑', save, True).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
-    root.bind('<Escape>', lambda e: root.destroy())
+    root.bind('<Escape>',escape)
     refresh();refresh_files()
     editor.focus_set()
     def reveal():

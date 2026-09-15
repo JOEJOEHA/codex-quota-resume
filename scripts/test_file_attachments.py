@@ -18,8 +18,12 @@ def mainloop(root,*args,**kwargs):
             widgets=list(walk(root))
             listing=next(x for x in widgets if isinstance(x,tk.Listbox))
             if stage==0:
-                menu=next(x for x in widgets if isinstance(x,tk.Menu))
-                with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source)]):menu.invoke(1)
+                add=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='+ 添加')
+                add.invoke();root.update()
+                choose=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='添加文件')
+                assert choose.winfo_viewable()
+                with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source)]):choose.invoke()
+                root.update();assert not choose.winfo_viewable()
                 assert listing.get(0)==source.name
             else:
                 assert listing.get(0)==source.name
