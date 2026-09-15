@@ -153,6 +153,19 @@ def show():
     button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
     select=TaskPicker(frame,font=font);select.pack(fill='x',pady=(0,12))
+    def refresh_pending(blink=False):
+        index=select.current()
+        pending=False
+        if 0<=index<len(threads):
+            try:
+                plan=json.loads(w.plan_path(threads[index]['id']).read_text(encoding='utf-8'))
+                pending=plan.get('status') in ('saved','sending','send-failed')
+            except (OSError,ValueError):pass
+        select.set_pending(pending,blink=blink)
+    def saved_feedback(thread):
+        note.configure(text='已收到并保存后续任务。')
+        index=select.current()
+        if 0<=index<len(threads) and threads[index]['id']==thread:refresh_pending(blink=True)
     def get_threads():
         with w.codex_status.connection(w.find_codex()) as request:
             data=request('thread/list',{'limit':30,'sortKey':'updated_at','sortDirection':'desc'})['data']
@@ -170,7 +183,8 @@ def show():
             ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
             dialog.deiconify();place_beside(dialog,root);dialog.lift();dialog.focus_force()
             return
-        dialog=w.plan_dialog(thread,parent=root)
+        task_name=(threads[index].get('name') or threads[index].get('preview') or '当前任务').replace('\n',' ')
+        dialog=w.plan_dialog(thread,parent=root,task_name=task_name,on_saved=saved_feedback)
         open_plans[thread]=dialog
         def closed(event):
             if event.widget!=dialog:return
@@ -188,6 +202,7 @@ def show():
            'retry-backoff':'上次启动失败，等待重试','task-changed':'任务状态已变化',
            'followup-sent':'后续需求已发送','followup-waiting-completion':'等待原任务完成验收'}
     def tick():
+        refresh_pending()
         state=w.load_state();code=state.get('status','not-installed')
         stamp=state.get('lastCheckedAt')
         status.configure(text=names.get(code,'尚未启用监控' if code=='not-installed' else code))

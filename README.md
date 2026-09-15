@@ -9,18 +9,19 @@
 - 主监控每分钟检查，备用监控每五分钟独立检查。
 - 两层共用进程锁和发送记录，避免重复启动。
 - 通过 `codex exec resume` 继续原任务；若桌面端已有写入者，使用 `codex queue` 交给现有桌面任务执行。入队后仍需观察启动，不把入队当作完成。不新建任务，不主动更改模型或购买额度。
-- 深色圆角后续任务输入框，支持选图、粘贴截图和 Windows 截图工具。
+- 深色圆角后续任务输入框，显示任务名称，支持图片、文件、粘贴截图和 Windows 截图工具；图片不设固定数量上限，缩略图可横向滚动。
+- 输入框右下角的 ↗ 可展开为独立大窗口，关闭大窗口会带回文字。保存后，任务选择框显示红旗并红绿闪动五次，红旗保留至任务已交给 Codex。
 - 监控查询不调用模型；真正续跑会正常消耗 Codex 额度。
 
 提供 **Windows 本地 EXE + Windows 计划任务 + 可选 Codex Skill**。EXE 已包含 Python、Tkinter 和 Pillow，无需另外安装 Python。
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.12/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.12)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.13/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.13)
 
 主界面与输入框右上角仅保留最小化和关闭按钮，可从任务栏恢复；软件、快捷方式及任务栏使用循环箭头图标。
 
-主界面与输入框采用统一深色圆角外观，可拖动标题栏或空白边缘移动窗口。绿色圆点和绿色按钮代表主备监控均已启用，灰色表示暂停，黄色表示未全部启用或无法确认；状态每五秒读取实际计划任务。
+主界面与输入框采用统一深色圆角外观、标题字号和任务菜单宽度，可拖动标题栏或空白边缘移动窗口。绿色圆点代表主备监控均已启用，红色代表未全部启用或无法确认；状态每五秒读取实际计划任务。
 
 双击打开，点击 **启用 / 更新监控**。程序会安装到 `%LOCALAPPDATA%\CodexQuotaWatcher`，复用主备计划任务并创建桌面快捷方式。在软件中选择任务，再点“打开需求输入框”即可填写文字、加入截图。关闭主界面不会停止后台计划任务；暂停使用“暂停监控”。
 

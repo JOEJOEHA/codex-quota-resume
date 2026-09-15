@@ -50,11 +50,18 @@ def write_plan(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def plan_dialog(thread: str, key=None, parent=None):
+def plan_dialog(thread: str, key=None, parent=None, task_name=None, on_saved=None):
     from plan_dialog import show
+    if task_name is None:
+        try:
+            with codex_status.connection(find_codex()) as request:
+                data=request('thread/read',{'threadId':thread,'includeTurns':False})['thread']
+            task_name=data.get('name') or data.get('preview') or '当前任务'
+        except Exception:
+            task_name=None
     ready_path = APP_DIR / 'followups' / (thread + '.ready.json')
     return show(thread, plan_path(thread), write_plan,
-         lambda: write_plan(ready_path, {'key': key, 'visibleAt': time.time()}),parent=parent)
+         lambda: write_plan(ready_path, {'key': key, 'visibleAt': time.time()}),parent=parent,task_name=task_name,on_saved=on_saved)
 
 
 def self_command(*args):

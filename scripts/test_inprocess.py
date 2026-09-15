@@ -34,6 +34,8 @@ def loop(root,*args,**kwargs):
             dialogs=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel)]
             assert len(dialogs)==1
             dialog=dialogs[0]
+            labels=[w.cget('text') for w in walk(dialog) if isinstance(w,tk.Label)]
+            assert 'Integration task' in labels and thread not in labels
             elapsed=time.perf_counter()-started
             assert dialog.winfo_viewable() and dialog.tk is root.tk
             main_rect=wintypes.RECT();child_rect=wintypes.RECT()
@@ -48,6 +50,9 @@ def loop(root,*args,**kwargs):
             assert len([w for w in root.winfo_children() if isinstance(w,tk.Toplevel)])==1
             assert not launch.called,'Opening a composer must not spawn a process'
             picker=next(w for w in walk(root) if isinstance(w,TaskPicker))
+            picker.toggle();root.update()
+            assert picker.button.winfo_width()==picker.panel.winfo_width(),(picker.button.winfo_width(),picker.panel.winfo_width())
+            picker.hide()
             picker.current(1);button(root,'打开需求输入框').invoke();root.update()
             others=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel) and w!=dialog]
             assert len(others)==1 and others[0].tk is root.tk
@@ -56,22 +61,48 @@ def loop(root,*args,**kwargs):
             picker.current(0)
             editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
             editor.insert('1.0','Keep draft')
+            button(dialog,'↗').invoke();root.update()
+            expanded=next(w for w in dialog.winfo_children() if isinstance(w,tk.Toplevel))
+            large=next(w for w in walk(expanded) if isinstance(w,tk.Text))
+            assert large.get('1.0','end-1c')=='Keep draft' and editor.cget('state')=='disabled'
+            large.insert('end',' expanded')
+            button(expanded,'×').invoke();root.update()
+            assert editor.get('1.0','end-1c')=='Keep draft expanded'
             editor.focus_force();root.update()
             with patch.object(plan_dialog.ImageGrab,'grabclipboard',return_value=Image.new('RGB',(80,60),'green')):
-                editor.event_generate('<Control-v>');root.update()
+                for _ in range(8):editor.event_generate('<Control-v>');root.update()
             button(dialog,'+ 添加').invoke();root.update()
             with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source)]):
                 button(dialog,'添加文件').invoke()
             minimize(dialog);root.update()
             button(root,'打开需求输入框').invoke();root.update()
             assert not ctypes.windll.user32.IsIconic(window_handle(dialog))
-            assert editor.get('1.0','end').strip()=='Keep draft'
-            button(root,'×').invoke();root.update()
-            assert root.state()=='withdrawn' and dialog.winfo_exists()
+            assert editor.get('1.0','end').strip()=='Keep draft expanded'
+            button(dialog,'↗').invoke();root.update()
+            colors=[]
+            configure=picker.flag.itemconfigure
+            def record_flag(item,**options):
+                if 'fill' in options:colors.append(options['fill'])
+                return configure(item,**options)
+            picker.flag.itemconfigure=record_flag
             button(dialog,'保存后续任务 ↑').invoke()
             data=json.loads((folder/'followups'/f'{thread}.json').read_text(encoding='utf-8'))
-            assert data['text']=='Keep draft' and len(data['images'])==len(data['files'])==1
-            print(f'INPROCESS_OK: {elapsed*1000:.0f} ms, same PID, no spawn, reuse, restore, attachments, close/save')
+            assert data['text']=='Keep draft expanded' and len(data['images'])==8 and len(data['files'])==1
+            assert data['taskName']=='Integration task' and picker.pending
+            ready=tk.BooleanVar();root.after(2800,lambda:ready.set(True));root.wait_variable(ready)
+            assert picker.pending and picker.flag.itemcget(picker.flag_shape,'fill')=='#ef5350'
+            assert picker.flag_timer is None and picker.flag.winfo_ismapped()
+            assert colors.count('#43c77a')==5,colors
+            data['status']='sent'
+            (folder/'followups'/f'{thread}.json').write_text(json.dumps(data),encoding='utf-8')
+            root.after(1100,lambda:ready.set(False));root.wait_variable(ready)
+            assert not picker.pending and not picker.flag.winfo_ismapped()
+            button(root,'打开需求输入框').invoke();root.update()
+            dialog=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+            button(root,'×').invoke();root.update()
+            assert root.state()=='withdrawn' and dialog.winfo_exists()
+            button(dialog,'×').invoke()
+            print(f'INPROCESS_OK: {elapsed*1000:.0f} ms, same PID, task name, fixed width, expanded editor, 8 images, saved/sent flag, close/save')
         except Exception as error:
             errors.append(error)
             try:root.destroy()

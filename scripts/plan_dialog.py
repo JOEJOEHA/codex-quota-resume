@@ -7,12 +7,12 @@ import uuid
 import ctypes
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageGrab, ImageTk
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, place_beside
 
 
-def show(thread, path, write_plan, on_ready=None, parent=None):
+def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, on_saved=None):
     if parent is None:ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     saved = old.get('status') == 'saved'
@@ -35,15 +35,23 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
     def button(parent, text, command, accent=False):
         return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
-    title = label(top, '续跑后还想跑什么任务', size=12); title.pack(side='left')
+    title = label(top, '续跑后的任务', size=16); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
-    label(body, '任务 ' + thread, '#888888', 9).pack(anchor='w')
+    label(body, task_name or old.get('taskName') or '当前任务', '#aaaaaa', 11).pack(anchor='w')
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
-    hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 9)
+    hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 11)
     hint.pack(side='bottom', anchor='w', pady=(8, 0))
-    previews = tk.Frame(body, bg='#181818'); previews.pack(side='bottom', fill='x')
+    preview_area=tk.Frame(body,bg='#181818')
+    preview_area.pack(side='bottom',fill='x')
+    preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
+    previews=tk.Frame(preview_canvas,bg='#181818')
+    preview_canvas.create_window(0,0,anchor='nw',window=previews)
+    preview_scroll=ttk.Scrollbar(preview_area,orient='horizontal',command=preview_canvas.xview)
+    preview_canvas.configure(xscrollcommand=preview_scroll.set)
+    previews.bind('<Configure>',lambda e:preview_canvas.configure(scrollregion=preview_canvas.bbox('all')))
+    preview_canvas.bind('<MouseWheel>',lambda e:preview_canvas.xview_scroll(-int(e.delta/120),'units'))
     file_row=tk.Frame(body,bg='#181818')
     file_list=tk.Listbox(file_row,height=2,bg='#2b2b2b',fg='#eeeeee',font=('Microsoft YaHei UI',9),
                          selectbackground='#365c91',relief='flat',highlightthickness=0,exportselection=False)
@@ -53,7 +61,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
     def refresh_files():
         file_list.delete(0,'end')
         for item in files:file_list.insert('end',Path(item).name)
-        if files:file_row.pack(side='bottom',fill='x',pady=(4,0),before=previews)
+        if files:file_row.pack(side='bottom',fill='x',pady=(4,0),before=preview_area)
         else:file_row.pack_forget()
     def remove_file(event=None):
         selected=file_list.curselection()
@@ -72,7 +80,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
         input_area.create_polygon(r,0,w-r,0,w,0,w,r,w,h-r,w,h,w-r,h,
                                   r,h,0,h,0,h-r,0,r,0,0,smooth=True,
                                   fill='#2b2b2b',outline='',tags='surface')
-        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-24))
+        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-46))
+        expand_host.place(x=max(0,w-38),y=max(0,h-32))
     input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
@@ -80,6 +89,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
     def refresh():
         for child in previews.winfo_children(): child.destroy()
         photos.clear()
+        if attachments:
+            preview_canvas.pack(fill='x');preview_scroll.pack(fill='x')
+        else:
+            preview_canvas.pack_forget();preview_scroll.pack_forget()
         for index,item in enumerate(attachments):
             try:
                 with Image.open(item) as im:
@@ -88,14 +101,12 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
                 photos.append(photo)
                 b = RoundedButton(previews, image=photo, padx=6, pady=6,
                               command=lambda p=item: remove(p))
-                b.grid(row=index//3,column=index%3,padx=(0,8),pady=(0,4))
+                b.grid(row=0,column=index,padx=(0,8),pady=(0,4))
             except (OSError, ValueError):
-                label(previews, '图片无法读取', '#ff9a9a').grid(row=index//3,column=index%3)
+                label(previews, '图片无法读取', '#ff9a9a').grid(row=0,column=index)
     def remove(item):
         attachments.remove(item); refresh()
     def add_image(im):
-        if len(attachments) >= 6:
-            messagebox.showinfo('图片数量', '每个任务最多添加 6 张截图。', parent=root); return
         folder = path.parent / 'images' / thread
         folder.mkdir(parents=True, exist_ok=True)
         target = folder / (uuid.uuid4().hex + '.png')
@@ -141,17 +152,52 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
         subprocess.Popen(['explorer.exe', 'ms-screenclip:'])
         timers.append(root.after(1800, root.deiconify))
         hint.configure(text='截图后回到这里，按 Ctrl+V 添加截图')
+    expanded=[None,None]
+    def collapse_editor():
+        window,large=expanded
+        if window is None:return
+        text=large.get('1.0','end-1c')
+        editor.configure(state='normal')
+        editor.delete('1.0','end');editor.insert('1.0',text)
+        expanded[:]=[None,None]
+        window.destroy();editor.focus_set()
+    def expand_editor():
+        if expanded[0] is not None:
+            expanded[0].deiconify();expanded[0].lift();return
+        window=tk.Toplevel(root)
+        window.title('编辑后续需求')
+        panel=rounded_window(window,760,620)
+        header=tk.Frame(panel,bg='#181818');header.pack(fill='x',pady=(0,12))
+        heading=label(header,'编辑后续需求',size=16);heading.pack(side='left')
+        window_controls(window,header,font,on_close=collapse_editor)
+        bind_drag(window,header,heading)
+        large=tk.Text(panel,bg='#2b2b2b',fg='#f3f3f3',insertbackground='white',
+                      relief='flat',highlightthickness=0,wrap='word',font=font,undo=True,padx=14,pady=14)
+        large.pack(fill='both',expand=True)
+        large.insert('1.0',editor.get('1.0','end-1c'))
+        expanded[:]=[window,large]
+        editor.configure(state='disabled')
+        window.protocol('WM_DELETE_WINDOW',collapse_editor)
+        window.bind('<Escape>',lambda e:collapse_editor())
+        window.bind('<Control-Return>',lambda e:collapse_editor())
+        large.bind('<Control-v>',paste)
+        large.focus_set()
+    expand_host=tk.Frame(input_area,bg='#2b2b2b')
+    expand_button=RoundedButton(expand_host,text='↗',command=expand_editor,font=font,padx=5,pady=1)
+    expand_button.pack()
     def save(event=None):
+        collapse_editor()
         text = editor.get('1.0', 'end').strip()
         if not text and not attachments and not files:
             messagebox.showinfo('请输入需求', '填写需求或添加附件后保存。', parent=root); return
         if any(not Path(p).is_file() for p in attachments + files):
             messagebox.showerror('附件不存在', '请移除无法读取的附件后重新添加。', parent=root); return
         try:
-            write_plan(path, {'threadId': thread, 'text': text, 'images': attachments, 'files': files,
+            write_plan(path, {'threadId': thread, 'taskName': task_name or old.get('taskName') or '当前任务', 'text': text, 'images': attachments, 'files': files,
                               'status': 'saved', 'savedAt': time.time()})
         except OSError as error:
             messagebox.showerror('保存失败', str(error), parent=root); return
+        if on_saved:on_saved(thread)
         root.destroy()
     menu=tk.Canvas(body,width=160,height=110,bg='#181818',highlightthickness=0)
     menu.create_polygon(20,1,140,1,159,1,159,20,159,90,159,109,140,109,

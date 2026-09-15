@@ -10,7 +10,8 @@ from PIL import Image, ImageDraw, ImageTk
 class RoundedButton(tk.Button):
     """Keep native button keyboard/command behavior with a rounded image surface."""
     def __init__(self, parent, *, text='', command=None, bg='#2b2b2b', fg='#eeeeee',
-                 font=('Microsoft YaHei UI', 11), padx=14, pady=10, image=None):
+                 font=('Microsoft YaHei UI', 11), padx=14, pady=10, image=None, width_px=None):
+        self.fixed_width=width_px
         self.fill=bg
         self.padding=(padx,pady)
         self.content_image=image
@@ -29,7 +30,7 @@ class RoundedButton(tk.Button):
         font=tkfont.Font(font=self.cget('font'))
         px,py=self.padding
         content=self.content_image
-        width=(content.width if content else font.measure(self.cget('text')))+2*px
+        width=self.fixed_width or (content.width if content else font.measure(self.cget('text')))+2*px
         height=(content.height if content else font.metrics('linespace'))+2*py
         color=self.fill
         if hover:
@@ -60,8 +61,14 @@ class TaskPicker(tk.Frame):
         super().__init__(parent,bg=parent.cget('bg'))
         self.values=[]
         self.index=-1
-        self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle)
+        self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle,width_px=374)
         self.button.pack(fill='x')
+        self.flag=tk.Canvas(self,width=24,height=26,bg='#2b2b2b',highlightthickness=0)
+        self.flag.create_line(5,3,5,24,fill='#dddddd',width=2)
+        self.flag_shape=self.flag.create_polygon(6,3,21,3,17,9,21,15,6,15,fill='#ef5350',outline='')
+        self.flag_timer=None
+        self.pending=False
+        self.bind('<Destroy>',self.cancel_flag,add='+')
         self.panel=tk.Canvas(parent,width=374,height=212,bg=parent.cget('bg'),highlightthickness=0)
         self.panel.create_polygon(20,1,354,1,373,1,373,20,373,192,373,211,354,211,
                                   20,211,1,211,1,192,1,20,1,1,smooth=True,
@@ -81,6 +88,27 @@ class TaskPicker(tk.Frame):
         self.listing.bind('<Escape>',lambda e:self.hide(keyboard=True))
         self.winfo_toplevel().bind('<Button-1>',self.dismiss,add='+')
 
+    def cancel_flag(self,event=None):
+        if event is not None and event.widget!=self:return
+        if self.flag_timer:self.after_cancel(self.flag_timer);self.flag_timer=None
+
+    def set_pending(self,pending,blink=False):
+        self.pending=pending
+        if not pending:
+            self.cancel_flag();self.flag.place_forget();return
+        self.flag.place(relx=1,x=-35,y=8)
+        tk.Misc.lift(self.flag)
+        if blink:
+            self.cancel_flag()
+            self.flash_flag(0)
+        elif self.flag_timer is None:self.flag.itemconfigure(self.flag_shape,fill='#ef5350')
+
+    def flash_flag(self,step):
+        self.flag_timer=None
+        if not self.pending:return
+        self.flag.itemconfigure(self.flag_shape,fill='#43c77a' if step%2==0 and step<10 else '#ef5350')
+        if step<10:self.flag_timer=self.after(250,lambda:self.flash_flag(step+1))
+
     def set_values(self,values):
         self.values=list(values)
         self.listing.delete(0,'end')
@@ -92,7 +120,7 @@ class TaskPicker(tk.Frame):
         self.index=index
         text=self.values[index] if 0<=index<len(self.values) else '选择任务'
         font=tkfont.Font(font=self.button.cget('font'))
-        while font.measure(text)>306:text=text[:-2]+'…'
+        while font.measure(text)>260:text=text[:-2]+'…'
         self.button.configure(text=text+'  ▾')
 
     def toggle(self):
