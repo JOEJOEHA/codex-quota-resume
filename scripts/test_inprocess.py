@@ -102,6 +102,9 @@ def loop(root,*args,**kwargs):
             button(root,'×').invoke();root.update()
             assert root.state()=='withdrawn' and dialog.winfo_exists()
             button(dialog,'×').invoke()
+            assert root.tray.active and root.state()=='withdrawn'
+            root.tray.restore();root.update()
+            root.tray.on_exit()
             print(f'INPROCESS_OK: {elapsed*1000:.0f} ms, same PID, task name, fixed width, expanded editor, 8 images, saved/sent flag, close/save')
         except Exception as error:
             errors.append(error)

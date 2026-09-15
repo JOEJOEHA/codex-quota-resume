@@ -197,8 +197,8 @@ def minimize(root):
     ctypes.windll.user32.ShowWindow(window_handle(root),6)
 
 
-def window_controls(root,parent,font,on_close=None):
-    for text,command in [('×',on_close or root.destroy),('—',lambda:minimize(root))]:
+def window_controls(root,parent,font,on_close=None,on_minimize=None):
+    for text,command in [('×',on_close or root.destroy),('—',on_minimize or (lambda:minimize(root)))]:
         RoundedButton(parent,text=text,command=command,font=font,padx=16,pady=8).pack(side='right',padx=(6,0))
 
 

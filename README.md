@@ -17,9 +17,9 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.13/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.13)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.14/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.14)
 
-主界面与输入框右上角仅保留最小化和关闭按钮，可从任务栏恢复；软件、快捷方式及任务栏使用循环箭头图标。
+主界面最小化或关闭后保留在系统托盘，点击循环箭头图标恢复，右键可打开或退出界面。退出界面不停止后台计划任务；若有打开的草稿，关闭草稿后再退出。输入框仍可从任务栏恢复。
 
 主界面与输入框采用统一深色圆角外观、标题字号和任务菜单宽度，可拖动标题栏或空白边缘移动窗口。绿色圆点代表主备监控均已启用，红色代表未全部启用或无法确认；状态每五秒读取实际计划任务。
 

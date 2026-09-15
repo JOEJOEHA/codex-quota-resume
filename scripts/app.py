@@ -18,6 +18,7 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
 import plan_dialog  # Load the composer once with the application.
+from tray import TrayIcon
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle, place_beside
 
 
@@ -105,7 +106,11 @@ def show():
     root=tk.Tk()
     root.title('Codex Quota Resume')
     open_plans={}
+    exiting=[False]
     def close_main():
+        root.withdraw()
+    def exit_interface():
+        exiting[0]=True
         if open_plans:root.withdraw()
         else:root.destroy()
     root.protocol('WM_DELETE_WINDOW',close_main)
@@ -122,7 +127,7 @@ def show():
     top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
     title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
     title.pack(side='left')
-    window_controls(root,top,font,on_close=close_main)
+    window_controls(root,top,font,on_close=close_main,on_minimize=root.withdraw)
     monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
     monitor_dot.pack(side='right',padx=(0,8))
     dot_images={}
@@ -189,7 +194,7 @@ def show():
         def closed(event):
             if event.widget!=dialog:return
             open_plans.pop(thread,None)
-            if not open_plans and root.state()=='withdrawn':root.destroy()
+            if not open_plans and exiting[0]:root.destroy()
         dialog.bind('<Destroy>',closed,add='+')
     plan_actions=tk.Frame(frame,bg='#181818');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
@@ -236,6 +241,7 @@ def show():
     tick();load_threads()
     threading.Thread(target=refresh_monitor,daemon=True).start()
     root.lift()
+    root.tray=TrayIcon(root,exit_interface)
     root.mainloop()
 
 
