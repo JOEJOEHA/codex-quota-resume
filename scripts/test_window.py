@@ -37,5 +37,17 @@ picker.listing.selection_clear(0,'end');picker.listing.selection_set(1);picker.c
 assert picker.current()==1
 picker.toggle();root.update();picker.listing.event_generate('<Escape>');root.update()
 assert not picker.panel.winfo_ismapped()
+for _ in range(2):
+ root.withdraw();root.deiconify();root.attributes('-topmost',True);root.update()
+ root.attributes('-topmost',False);root.update()
+ flags=ctypes.windll.user32.GetWindowLongW(window_handle(root),-20)
+ assert flags & 0x40000 and not flags & 0x80,hex(flags)
+ minimize(root);root.update()
+ assert ctypes.windll.user32.IsIconic(window_handle(root))
+ ctypes.windll.user32.ShowWindow(window_handle(root),9);root.update()
+ assert not ctypes.windll.user32.IsIconic(window_handle(root))
+picker.button.focus_force();root.update()
+picker.button.event_generate('<ButtonPress-1>');root.update()
+assert root.focus_get()!=picker.button
 root.destroy()
 print('WINDOW_CONTROLS_OK: minimize button, restore, drag and negative coordinates; only two controls')

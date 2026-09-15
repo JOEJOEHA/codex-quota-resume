@@ -16,7 +16,7 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.9/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.9)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.10/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.10)
 
 主界面与输入框右上角仅保留最小化和关闭按钮，可从任务栏恢复；软件、快捷方式及任务栏使用循环箭头图标。
 

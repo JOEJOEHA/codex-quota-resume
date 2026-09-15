@@ -17,6 +17,7 @@ class RoundedButton(tk.Button):
                          bg=parent.cget('bg'),activebackground=parent.cget('bg'),
                          activeforeground=fg,relief='flat',bd=0,highlightthickness=0,
                          padx=0,pady=0,cursor='hand2',compound='center',takefocus=True)
+        self.bind('<ButtonPress-1>',lambda e:self.winfo_toplevel().focus_set())
         self.bind('<Enter>',lambda e:self.redraw(True))
         self.bind('<Leave>',lambda e:self.redraw())
         self.bind('<FocusIn>',lambda e:self.redraw())
@@ -76,7 +77,7 @@ class TaskPicker(tk.Frame):
         self.listing.pack(fill='both',expand=True)
         self.listing.bind('<ButtonRelease-1>',self.choose)
         self.listing.bind('<Return>',self.choose)
-        self.listing.bind('<Escape>',lambda e:self.hide())
+        self.listing.bind('<Escape>',lambda e:self.hide(keyboard=True))
         self.winfo_toplevel().bind('<Button-1>',self.dismiss,add='+')
 
     def set_values(self,values):
@@ -102,14 +103,14 @@ class TaskPicker(tk.Frame):
             self.listing.selection_set(self.index);self.listing.activate(self.index);self.listing.see(self.index)
         self.listing.focus_set()
 
-    def hide(self):
+    def hide(self,keyboard=False):
         self.panel.place_forget()
-        self.button.focus_set()
+        (self.button if keyboard else self.winfo_toplevel()).focus_set()
 
     def choose(self,event=None):
         selection=self.listing.curselection()
         if selection:self.current(selection[0])
-        self.hide()
+        self.hide(keyboard=event is not None and event.type==tk.EventType.KeyPress)
         return 'break'
 
     def dismiss(self,event):
@@ -127,6 +128,7 @@ def window_handle(root):
 
 
 def minimize(root):
+    configure_taskbar(root)
     ctypes.windll.user32.ShowWindow(window_handle(root),6)
 
 
@@ -173,5 +175,6 @@ def rounded_window(root,width,height):
     body=tk.Frame(canvas,bg='#181818')
     canvas.create_window(28,22,anchor='nw',width=width-56,height=height-44,window=body)
     bind_drag(root,canvas,body)
+    root.bind('<Map>',lambda event:root.after_idle(lambda:configure_taskbar(root)) if event.widget==root else None,add='+')
     root.after(0,lambda:configure_taskbar(root))
     return body

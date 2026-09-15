@@ -116,9 +116,11 @@ def show():
     title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
     title.pack(side='left')
     window_controls(root,top,font)
-    bind_drag(root,top,title)
+    monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
+    monitor_dot.pack(side='right',padx=(0,8))
+    dot=monitor_dot.create_oval(3,3,33,33,fill='#ef5350',outline='')
+    bind_drag(root,top,title,monitor_dot)
     label('有额度就继续 · 本地监控 · 后续任务支持截图', '#aaaaaa')
-    monitor_status=label('● 正在确认监控状态…','#aaaaaa',13)
     status=label('正在读取运行状态…',size=14)
     detail=label('', '#aaaaaa',10)
     note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#aaaaaa',10)
@@ -172,8 +174,8 @@ def show():
             kind,value=results.get_nowait()
             if kind=='monitor':
                 text,color,enabled=value
-                monitor_status.configure(text=text,fg=color)
-                enable_button.configure(text='● 监控已启用' if enabled else '启用 / 更新监控',
+                monitor_dot.itemconfigure(dot,fill='#43c77a' if enabled else '#ef5350')
+                enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',
                                         bg='#21854d' if enabled else '#2d6acb')
             elif kind=='error':
                 busy[0]=False
