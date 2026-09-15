@@ -1,6 +1,7 @@
 """Shared rounded desktop window and draggable non-input surfaces."""
 import tkinter as tk
 import ctypes
+from ctypes import wintypes
 from pathlib import Path
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
@@ -127,6 +128,42 @@ def window_handle(root):
     return ctypes.c_void_p(user32.GetParent(root.winfo_id()))
 
 
+def adjacent_positions(main,child_size,work,gap=6):
+    x,y,width,height=main
+    cw,ch=child_size
+    left,top,right,bottom=work
+    y=max(top,min(y,bottom-max(height,ch)))
+    if x+width+gap+cw<=right:
+        cx=x+width+gap
+    elif x-gap-cw>=left:
+        cx=x-gap-cw
+    else:
+        x=max(left,min(x,right-width-gap-cw))
+        cx=x+width+gap
+    return (x,y),(cx,y)
+
+
+def place_beside(dialog,parent):
+    """Dock on the current monitor, including monitors with negative coordinates."""
+    class MonitorInfo(ctypes.Structure):
+        _fields_=[('cbSize',wintypes.DWORD),('rcMonitor',wintypes.RECT),
+                  ('rcWork',wintypes.RECT),('dwFlags',wintypes.DWORD)]
+    user32=ctypes.windll.user32
+    user32.MonitorFromWindow.restype=ctypes.c_void_p
+    parent_handle=window_handle(parent)
+    rect=wintypes.RECT()
+    if not user32.GetWindowRect(parent_handle,ctypes.byref(rect)):raise ctypes.WinError()
+    monitor=ctypes.c_void_p(user32.MonitorFromWindow(parent_handle,2))
+    info=MonitorInfo();info.cbSize=ctypes.sizeof(info)
+    if not user32.GetMonitorInfoW(monitor,ctypes.byref(info)):raise ctypes.WinError()
+    work=info.rcWork
+    original=(rect.left,rect.top)
+    main,child=adjacent_positions((*original,rect.right-rect.left,rect.bottom-rect.top),
+                                  dialog.window_size,(work.left,work.top,work.right,work.bottom))
+    if main!=original:user32.SetWindowPos(parent_handle,None,*main,0,0,0x15)
+    user32.SetWindowPos(window_handle(dialog),None,*child,*dialog.window_size,0x14)
+
+
 def minimize(root):
     configure_taskbar(root)
     ctypes.windll.user32.ShowWindow(window_handle(root),6)
@@ -160,6 +197,7 @@ def bind_drag(root, *widgets):
 
 
 def rounded_window(root,width,height):
+    root.window_size=(width,height)
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
     root.overrideredirect(True)
     root.configure(bg='#010203')

@@ -9,7 +9,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageGrab, ImageTk
-from window_ui import rounded_window, bind_drag, window_controls, RoundedButton
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, place_beside
 
 
 def show(thread, path, write_plan, on_ready=None, parent=None):
@@ -19,6 +19,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
     attachments = list(old.get('images', [])) if saved else []
     files = list(old.get('files', [])) if saved else []
     root = tk.Toplevel(parent) if parent is not None else tk.Tk()
+    if parent is not None:root.withdraw()
     timers=[]
     def cancel_timers(event):
         if event.widget==root:
@@ -198,7 +199,11 @@ def show(thread, path, write_plan, on_ready=None, parent=None):
     refresh();refresh_files()
     editor.focus_set()
     def reveal():
+        if parent is not None:
+            root.update_idletasks()
+            place_beside(root,parent)
         root.deiconify()
+        if parent is not None:place_beside(root,parent)
         root.lift()
         root.attributes('-topmost', True)
         root.update_idletasks()

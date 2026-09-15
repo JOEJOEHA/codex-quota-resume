@@ -1,5 +1,6 @@
 """Exercise the real compose button without starting Codex or child processes."""
 import ctypes
+from ctypes import wintypes
 import json
 import os
 import tempfile
@@ -35,6 +36,11 @@ def loop(root,*args,**kwargs):
             dialog=dialogs[0]
             elapsed=time.perf_counter()-started
             assert dialog.winfo_viewable() and dialog.tk is root.tk
+            main_rect=wintypes.RECT();child_rect=wintypes.RECT()
+            ctypes.windll.user32.GetWindowRect(window_handle(root),ctypes.byref(main_rect))
+            ctypes.windll.user32.GetWindowRect(window_handle(dialog),ctypes.byref(child_rect))
+            assert child_rect.top==main_rect.top
+            assert child_rect.left==main_rect.right+6 or child_rect.right==main_rect.left-6
             pid=ctypes.c_ulong()
             ctypes.windll.user32.GetWindowThreadProcessId(window_handle(dialog),ctypes.byref(pid))
             assert pid.value==os.getpid()

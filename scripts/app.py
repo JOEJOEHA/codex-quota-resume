@@ -18,7 +18,7 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
 import plan_dialog  # Load the composer once with the application.
-from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle, place_beside
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -166,8 +166,9 @@ def show():
         thread=threads[index]['id']
         if thread in open_plans:
             dialog=open_plans[thread]
+            place_beside(dialog,root)
             ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
-            dialog.deiconify();dialog.lift();dialog.focus_force()
+            dialog.deiconify();place_beside(dialog,root);dialog.lift();dialog.focus_force()
             return
         dialog=w.plan_dialog(thread,parent=root)
         open_plans[thread]=dialog
