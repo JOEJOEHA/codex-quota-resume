@@ -2,6 +2,54 @@
 import tkinter as tk
 import ctypes
 from pathlib import Path
+from tkinter import font as tkfont
+from PIL import Image, ImageDraw, ImageTk
+
+
+class RoundedButton(tk.Button):
+    """Keep native button keyboard/command behavior with a rounded image surface."""
+    def __init__(self, parent, *, text='', command=None, bg='#2b2b2b', fg='#eeeeee',
+                 font=('Microsoft YaHei UI', 11), padx=14, pady=10, image=None):
+        self.fill=bg
+        self.padding=(padx,pady)
+        self.content_image=image
+        super().__init__(parent,text=text,command=command,font=font,fg=fg,
+                         bg=parent.cget('bg'),activebackground=parent.cget('bg'),
+                         activeforeground=fg,relief='flat',bd=0,highlightthickness=0,
+                         padx=0,pady=0,cursor='hand2',compound='center',takefocus=True)
+        self.bind('<Enter>',lambda e:self.redraw(True))
+        self.bind('<Leave>',lambda e:self.redraw())
+        self.bind('<FocusIn>',lambda e:self.redraw())
+        self.bind('<FocusOut>',lambda e:self.redraw())
+        self.redraw()
+
+    def redraw(self,hover=False):
+        font=tkfont.Font(font=self.cget('font'))
+        px,py=self.padding
+        content=self.content_image
+        width=(content.width if content else font.measure(self.cget('text')))+2*px
+        height=(content.height if content else font.metrics('linespace'))+2*py
+        color=self.fill
+        if hover:
+            color='#'+''.join(f'{min(255,int(color[i:i+2],16)+16):02x}' for i in (1,3,5))
+        background=tuple(v//257 for v in self.winfo_rgb(self.master.cget('bg')))
+        surface=Image.new('RGB',(width*3,height*3),background)
+        draw=ImageDraw.Draw(surface)
+        draw.rounded_rectangle((1,1,width*3-2,height*3-2),radius=30,fill=color,
+                               outline='#8ab4f8' if self.focus_get()==self else color,width=3)
+        surface=surface.resize((width,height),Image.Resampling.LANCZOS)
+        if content:surface.paste(content,(px,py))
+        self.surface=ImageTk.PhotoImage(surface,master=self)
+        super().configure(image=self.surface)
+
+    def configure(self,cnf=None,**kwargs):
+        if cnf is not None:return super().configure(cnf,**kwargs)
+        if 'bg' in kwargs:self.fill=kwargs.pop('bg')
+        result=super().configure(**kwargs)
+        self.redraw()
+        return result
+
+    config=configure
 
 
 def window_handle(root):
@@ -16,9 +64,7 @@ def minimize(root):
 
 def window_controls(root,parent,font):
     for text,command in [('×',root.destroy),('—',lambda:minimize(root))]:
-        tk.Button(parent,text=text,command=command,bg='#383838',fg='white',
-                  activebackground='#494949',activeforeground='white',relief='flat',bd=0,
-                  font=font,padx=16,pady=8,takefocus=True).pack(side='right',padx=(6,0))
+        RoundedButton(parent,text=text,command=command,font=font,padx=16,pady=8).pack(side='right',padx=(6,0))
 
 
 def configure_taskbar(root):
@@ -55,8 +101,8 @@ def rounded_window(root,width,height):
     canvas.create_polygon(radius,1,width-radius,1,width-1,1,width-1,radius,
                           width-1,height-radius,width-1,height-1,width-radius,height-1,
                           radius,height-1,1,height-1,1,height-radius,1,radius,1,1,
-                          smooth=True,fill='#292929',outline='#414141',width=1)
-    body=tk.Frame(canvas,bg='#292929')
+                          smooth=True,fill='#181818',outline='#383838',width=1)
+    body=tk.Frame(canvas,bg='#181818')
     canvas.create_window(28,22,anchor='nw',width=width-56,height=height-44,window=body)
     bind_drag(root,canvas,body)
     root.after(0,lambda:configure_taskbar(root))

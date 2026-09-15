@@ -8,7 +8,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageGrab, ImageTk
-from window_ui import rounded_window, bind_drag, window_controls
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton
 
 
 def show(thread, path, write_plan, on_ready=None):
@@ -21,26 +21,24 @@ def show(thread, path, write_plan, on_ready=None):
     body = rounded_window(root, 860, 580)
     font = ('Microsoft YaHei UI', 11)
     def label(parent, text, color='#eeeeee', size=11):
-        item = tk.Label(parent, text=text, bg='#292929', fg=color, font=('Microsoft YaHei UI', size))
+        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size))
         bind_drag(root, item)
         return item
     def button(parent, text, command, accent=False):
-        return tk.Button(parent, text=text, command=command, bg='#2864cb' if accent else '#383838',
-                         fg='white', activebackground='#454545', activeforeground='white',
-                         relief='flat', bd=0, padx=14, pady=8, cursor='hand2', font=font)
-    top = tk.Frame(body, bg='#292929'); top.pack(fill='x')
+        return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
+    top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
     title = label(top, '续跑后还想跑什么任务', size=16); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
     label(body, '任务 ' + thread, '#888888', 9).pack(anchor='w')
-    bottom = tk.Frame(body, bg='#292929'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
+    bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
     hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击缩略图移除', '#aaaaaa', 9)
     hint.pack(side='bottom', anchor='w', pady=(8, 0))
-    previews = tk.Frame(body, bg='#292929'); previews.pack(side='bottom', fill='x')
-    editor = tk.Text(body, bg='#292929', fg='#f3f3f3', insertbackground='white',
+    previews = tk.Frame(body, bg='#181818'); previews.pack(side='bottom', fill='x')
+    editor = tk.Text(body, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
                      selectbackground='#365c91', relief='flat', highlightthickness=0,
-                     wrap='word', font=font, undo=True, height=8)
+                     wrap='word', font=font, undo=True, height=8, padx=12, pady=12)
     editor.pack(fill='both', expand=True, pady=18)
     if saved:
         editor.insert('1.0', old.get('text', ''))
@@ -52,9 +50,9 @@ def show(thread, path, write_plan, on_ready=None):
             try:
                 with Image.open(item) as im:
                     im.thumbnail((92, 68))
-                    photo = ImageTk.PhotoImage(im.copy())
+                    photo = im.copy()
                 photos.append(photo)
-                b = tk.Button(previews, image=photo, bg='#383838', relief='flat', bd=2,
+                b = RoundedButton(previews, image=photo, padx=6, pady=6,
                               command=lambda p=item: remove(p))
                 b.pack(side='left', padx=(0, 8))
             except (OSError, ValueError):

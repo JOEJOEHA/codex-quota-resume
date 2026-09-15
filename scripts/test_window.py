@@ -1,5 +1,5 @@
 import tkinter as tk
-from window_ui import rounded_window,bind_drag,minimize,window_handle,window_controls
+from window_ui import rounded_window,bind_drag,minimize,window_handle,window_controls,RoundedButton
 import ctypes
 root=tk.Tk();body=rounded_window(root,500,320)
 controls=tk.Frame(body);controls.pack()
@@ -22,5 +22,13 @@ assert ctypes.windll.user32.IsIconic(window_handle(root))
 ctypes.windll.user32.ShowWindow(window_handle(root),9);root.update()
 assert not ctypes.windll.user32.IsIconic(window_handle(root))
 assert root.winfo_viewable()
+called=[]
+b=RoundedButton(body,text='启用',command=lambda:called.append(True));b.pack()
+b.configure(text='● 监控已启用',bg='#21854d')
+root.update();b.focus_force();root.update()
+b.event_generate('<KeyPress-space>');b.event_generate('<KeyRelease-space>')
+ready=tk.BooleanVar();root.after(150,lambda:ready.set(True));root.wait_variable(ready)
+assert called==[True] and b.fill=='#21854d'
+assert b.surface.width()>0
 root.destroy()
 print('WINDOW_CONTROLS_OK: minimize button, restore, drag and negative coordinates; only two controls')

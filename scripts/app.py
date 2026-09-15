@@ -16,7 +16,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 import quota_watcher as w
-from window_ui import rounded_window, bind_drag, window_controls
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -104,14 +104,14 @@ def show():
     root.title('Codex Quota Resume')
     frame=rounded_window(root,860,680)
     style=ttk.Style(root); style.theme_use('clam')
-    style.configure('TCombobox',fieldbackground='#303030',background='#383838',foreground='white',padding=8)
-    style.map('TCombobox',fieldbackground=[('readonly','#303030')],foreground=[('readonly','white')])
+    style.configure('TCombobox',fieldbackground='#2b2b2b',background='#2b2b2b',bordercolor='#383838',lightcolor='#383838',darkcolor='#383838',arrowcolor='#aaaaaa',foreground='white',padding=8)
+    style.map('TCombobox',fieldbackground=[('readonly','#2b2b2b')],foreground=[('readonly','white')])
     font=('Microsoft YaHei UI',11)
     def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#292929',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left')
+        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left')
         item.pack(fill='x',pady=(0,10));bind_drag(root,item);return item
-    top=tk.Frame(frame,bg='#292929');top.pack(fill='x',pady=(0,16))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#292929',fg='#eeeeee',font=('Microsoft YaHei UI',20))
+    top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,16))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',20))
     title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root,top,title)
@@ -120,7 +120,7 @@ def show():
     status=label('正在读取运行状态…',size=14)
     detail=label('', '#aaaaaa',10)
     note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#aaaaaa',10)
-    actions=tk.Frame(frame,bg='#292929');actions.pack(fill='x',pady=(2,18))
+    actions=tk.Frame(frame,bg='#181818');actions.pack(fill='x',pady=(2,18))
     results=queue.Queue();busy=[False];threads=[]
     def background(job):
         if busy[0]:return
@@ -130,8 +130,7 @@ def show():
             except Exception as error:results.put(('error',str(error)))
         threading.Thread(target=work,daemon=True).start()
     def button(parent,text,command,blue=False):
-        b=tk.Button(parent,text=text,command=command,bg='#2864cb' if blue else '#333333',fg='white',
-                    activebackground='#454545',activeforeground='white',relief='flat',font=font,padx=14,pady=10)
+        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=font)
         b.pack(side='left',padx=(0,10));return b
     enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
@@ -152,7 +151,7 @@ def show():
         startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=1
         subprocess.Popen(command,startupinfo=startup,
                          env={**os.environ,'PYINSTALLER_RESET_ENVIRONMENT':'1'})
-    plan_actions=tk.Frame(frame,bg='#292929');plan_actions.pack(fill='x')
+    plan_actions=tk.Frame(frame,bg='#181818');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
     label('后续需求会在监控器恢复的原任务完成后发送。', '#999999',10)
@@ -174,7 +173,7 @@ def show():
                 text,color,enabled=value
                 monitor_status.configure(text=text,fg=color)
                 enable_button.configure(text='● 监控已启用' if enabled else '启用 / 更新监控',
-                                        bg='#21854d' if enabled else '#2864cb')
+                                        bg='#21854d' if enabled else '#2d6acb')
             elif kind=='error':
                 busy[0]=False
                 note.configure(text='操作失败，详情已显示');messagebox.showerror('操作失败',value,parent=root)
