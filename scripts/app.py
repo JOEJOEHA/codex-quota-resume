@@ -102,7 +102,7 @@ def show():
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
-    frame=rounded_window(root,430,680)
+    frame=rounded_window(root,430,600)
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TCombobox',fieldbackground='#2b2b2b',background='#2b2b2b',bordercolor='#383838',lightcolor='#383838',darkcolor='#383838',arrowcolor='#aaaaaa',foreground='white',padding=8)
     style.map('TCombobox',fieldbackground=[('readonly','#2b2b2b')],foreground=[('readonly','white')])
