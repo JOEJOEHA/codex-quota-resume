@@ -12,13 +12,18 @@ from PIL import Image, ImageGrab, ImageTk
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton
 
 
-def show(thread, path, write_plan, on_ready=None):
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+def show(thread, path, write_plan, on_ready=None, parent=None):
+    if parent is None:ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     saved = old.get('status') == 'saved'
     attachments = list(old.get('images', [])) if saved else []
     files = list(old.get('files', [])) if saved else []
-    root = tk.Tk()
+    root = tk.Toplevel(parent) if parent is not None else tk.Tk()
+    timers=[]
+    def cancel_timers(event):
+        if event.widget==root:
+            for timer in timers:root.after_cancel(timer)
+    root.bind('<Destroy>',cancel_timers,add='+')
     root.title('续跑后还想跑什么任务')
     body = rounded_window(root, 430, 535)
     font = ('Microsoft YaHei UI', 11)
@@ -133,7 +138,7 @@ def show(thread, path, write_plan, on_ready=None):
     def screenshot():
         root.withdraw()
         subprocess.Popen(['explorer.exe', 'ms-screenclip:'])
-        root.after(1800, root.deiconify)
+        timers.append(root.after(1800, root.deiconify))
         hint.configure(text='截图后回到这里，按 Ctrl+V 添加截图')
     def save(event=None):
         text = editor.get('1.0', 'end').strip()
@@ -199,6 +204,7 @@ def show(thread, path, write_plan, on_ready=None):
         root.update_idletasks()
         if on_ready and root.winfo_viewable():
             on_ready()
-        root.after(5000, lambda: root.attributes('-topmost', False))
-    root.after(100, reveal)
-    root.mainloop()
+        timers.append(root.after(5000, lambda: root.attributes('-topmost', False)))
+    timers.append(root.after_idle(reveal))
+    if parent is None:root.mainloop()
+    return root

@@ -50,11 +50,11 @@ def write_plan(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
-def plan_dialog(thread: str, key=None) -> None:
+def plan_dialog(thread: str, key=None, parent=None):
     from plan_dialog import show
     ready_path = APP_DIR / 'followups' / (thread + '.ready.json')
-    show(thread, plan_path(thread), write_plan,
-         lambda: write_plan(ready_path, {'key': key, 'visibleAt': time.time()}))
+    return show(thread, plan_path(thread), write_plan,
+         lambda: write_plan(ready_path, {'key': key, 'visibleAt': time.time()}),parent=parent)
 
 
 def self_command(*args):

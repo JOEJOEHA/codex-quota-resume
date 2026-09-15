@@ -15,8 +15,10 @@ from xml.etree import ElementTree as ET
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
+from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
-from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker
+import plan_dialog  # Load the composer once with the application.
+from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -102,6 +104,11 @@ def show():
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
+    open_plans={}
+    def close_main():
+        if open_plans:root.withdraw()
+        else:root.destroy()
+    root.protocol('WM_DELETE_WINDOW',close_main)
     frame=rounded_window(root,430,535)
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TScrollbar',background='#383838',troughcolor='#242424',
@@ -115,10 +122,15 @@ def show():
     top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
     title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
     title.pack(side='left')
-    window_controls(root,top,font)
+    window_controls(root,top,font,on_close=close_main)
     monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
     monitor_dot.pack(side='right',padx=(0,8))
-    dot=monitor_dot.create_oval(3,3,33,33,fill='#ef5350',outline='')
+    dot_images={}
+    for enabled,color in ((True,'#43c77a'),(False,'#ef5350')):
+        image=Image.new('RGB',(144,144),'#181818')
+        ImageDraw.Draw(image).ellipse((12,12,131,131),fill=color)
+        dot_images[enabled]=ImageTk.PhotoImage(image.resize((36,36),Image.Resampling.LANCZOS),master=root)
+    dot=monitor_dot.create_image(0,0,anchor='nw',image=dot_images[False])
     bind_drag(root,top,title,monitor_dot)
     label('有额度就继续 · 本地监控 · 后续任务支持截图', '#aaaaaa')
     status=label('正在读取运行状态…',size=14)
@@ -151,10 +163,19 @@ def show():
         index=select.current()
         if index<0:
             messagebox.showinfo('选择任务','先刷新并选择一个任务。',parent=root);return
-        command=w.self_command('--plan',threads[index]['id'])
-        startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=1
-        subprocess.Popen(command,startupinfo=startup,
-                         env={**os.environ,'PYINSTALLER_RESET_ENVIRONMENT':'1'})
+        thread=threads[index]['id']
+        if thread in open_plans:
+            dialog=open_plans[thread]
+            ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
+            dialog.deiconify();dialog.lift();dialog.focus_force()
+            return
+        dialog=w.plan_dialog(thread,parent=root)
+        open_plans[thread]=dialog
+        def closed(event):
+            if event.widget!=dialog:return
+            open_plans.pop(thread,None)
+            if not open_plans and root.state()=='withdrawn':root.destroy()
+        dialog.bind('<Destroy>',closed,add='+')
     plan_actions=tk.Frame(frame,bg='#181818');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
@@ -174,7 +195,7 @@ def show():
             kind,value=results.get_nowait()
             if kind=='monitor':
                 text,color,enabled=value
-                monitor_dot.itemconfigure(dot,fill='#43c77a' if enabled else '#ef5350')
+                monitor_dot.itemconfigure(dot,image=dot_images[enabled])
                 enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',
                                         bg='#21854d' if enabled else '#2d6acb')
             elif kind=='error':

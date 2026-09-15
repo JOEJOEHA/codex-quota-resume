@@ -16,7 +16,7 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.10/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.10)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.11/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.11)
 
 主界面与输入框右上角仅保留最小化和关闭按钮，可从任务栏恢复；软件、快捷方式及任务栏使用循环箭头图标。
 
@@ -122,3 +122,5 @@ Windows-only beta: a local primary watcher and an independent App Server-based b
 MIT licensed. This is an independent community project, not an official OpenAI product.
 
 文件附件：在需求弹窗点击“+ 添加 → 添加文件”。文件复制保存到本机，续跑时将本地路径随需求提供给 Codex。双击文件名或选中后按 Delete 移除附件。
+
+主界面直接在当前进程打开需求弹窗，同一任务重复点击会唤回已有草稿。关闭主窗口会保留仍在编辑的弹窗；后台监控在主程序关闭时仍可用同一个 EXE 单独显示弹窗。
