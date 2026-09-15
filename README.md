@@ -16,7 +16,7 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.7/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.7)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.8/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.8)
 
 主界面与输入框右上角仅保留最小化和关闭按钮，可从任务栏恢复；软件、快捷方式及任务栏使用循环箭头图标。
 
@@ -120,3 +120,5 @@ python -m pip install -r requirements.txt pyinstaller
 Windows-only beta: a local primary watcher and an independent App Server-based backup resume Codex tasks stopped by explicit quota errors when live quota becomes available. Monitoring makes no model calls; resumed work uses normal Codex quota. The EXE bundles Python and Pillow; a compatible signed-in Codex CLI is still required. No guaranteed recovery; experimental APIs may change. See the commands above for installation, lifecycle controls and offline tests.
 
 MIT licensed. This is an independent community project, not an official OpenAI product.
+
+文件附件：在需求弹窗点击“+ 添加 → 添加文件”。文件复制保存到本机，续跑时将本地路径随需求提供给 Codex。双击文件名或选中后按 Delete 移除附件。

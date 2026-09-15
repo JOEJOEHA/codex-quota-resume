@@ -102,15 +102,15 @@ def show():
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
-    frame=rounded_window(root,430,600)
+    frame=rounded_window(root,430,535)
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TCombobox',fieldbackground='#2b2b2b',background='#2b2b2b',bordercolor='#383838',lightcolor='#383838',darkcolor='#383838',arrowcolor='#aaaaaa',foreground='white',padding=8)
     style.map('TCombobox',fieldbackground=[('readonly','#2b2b2b')],foreground=[('readonly','white')])
     font=('Microsoft YaHei UI',11)
     def label(text,color='#eeeeee',size=11):
         item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left',wraplength=374)
-        item.pack(fill='x',pady=(0,10));bind_drag(root,item);return item
-    top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,16))
+        item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
+    top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
     title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
     title.pack(side='left')
     window_controls(root,top,font)
@@ -155,7 +155,6 @@ def show():
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
     label('后续需求会在监控器恢复的原任务完成后发送。', '#999999',10)
-    label('Windows Beta · 查询不调用模型，实际续跑正常消耗额度。', '#777777',9)
     names={'waiting-quota':'等待额度恢复','no-quota-stall':'未发现需要续跑的额度中断任务',
            'resuming':'正在续跑','resumed':'本次续跑已返回','queued-awaiting-start':'已交给 Codex，等待开始',
            'waiting-start':'等待任务开始确认','dispatch-unconfirmed':'任务尚未确认开始，请查看运行记录',

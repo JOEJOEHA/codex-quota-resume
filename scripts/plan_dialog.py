@@ -1,5 +1,6 @@
 """Local follow-up composer; no network or model calls."""
 import json
+import shutil
 import subprocess
 import time
 import uuid
@@ -16,37 +17,64 @@ def show(thread, path, write_plan, on_ready=None):
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     saved = old.get('status') == 'saved'
     attachments = list(old.get('images', [])) if saved else []
+    files = list(old.get('files', [])) if saved else []
     root = tk.Tk()
     root.title('续跑后还想跑什么任务')
-    body = rounded_window(root, 860, 580)
+    body = rounded_window(root, 430, 535)
     font = ('Microsoft YaHei UI', 11)
     def label(parent, text, color='#eeeeee', size=11):
-        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size))
+        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size),wraplength=374,justify='left')
         bind_drag(root, item)
         return item
     def button(parent, text, command, accent=False):
         return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
-    title = label(top, '续跑后还想跑什么任务', size=16); title.pack(side='left')
+    title = label(top, '续跑后还想跑什么任务', size=12); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
     label(body, '任务 ' + thread, '#888888', 9).pack(anchor='w')
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
-    hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击缩略图移除', '#aaaaaa', 9)
+    hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 9)
     hint.pack(side='bottom', anchor='w', pady=(8, 0))
     previews = tk.Frame(body, bg='#181818'); previews.pack(side='bottom', fill='x')
-    editor = tk.Text(body, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
+    file_row=tk.Frame(body,bg='#181818')
+    file_list=tk.Listbox(file_row,height=2,bg='#2b2b2b',fg='#eeeeee',font=('Microsoft YaHei UI',9),
+                         selectbackground='#365c91',relief='flat',highlightthickness=0,exportselection=False)
+    file_scroll=tk.Scrollbar(file_row,command=file_list.yview)
+    file_list.configure(yscrollcommand=file_scroll.set)
+    file_scroll.pack(side='right',fill='y');file_list.pack(side='left',fill='both',expand=True)
+    def refresh_files():
+        file_list.delete(0,'end')
+        for item in files:file_list.insert('end',Path(item).name)
+        if files:file_row.pack(side='bottom',fill='x',pady=(4,0),before=previews)
+        else:file_row.pack_forget()
+    def remove_file(event=None):
+        selected=file_list.curselection()
+        if selected:files.pop(selected[0]);refresh_files()
+    file_list.bind('<Double-Button-1>',remove_file)
+    file_list.bind('<Delete>',remove_file)
+    input_area=tk.Canvas(body,bg='#181818',highlightthickness=0,height=180)
+    input_area.pack(fill='both',expand=True,pady=18)
+    editor = tk.Text(input_area, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
                      selectbackground='#365c91', relief='flat', highlightthickness=0,
                      wrap='word', font=font, undo=True, height=8, padx=12, pady=12)
-    editor.pack(fill='both', expand=True, pady=18)
+    def resize_editor(event):
+        w,h=event.width,event.height
+        r=24
+        input_area.delete('surface')
+        input_area.create_polygon(r,0,w-r,0,w,0,w,r,w,h-r,w,h,w-r,h,
+                                  r,h,0,h,0,h-r,0,r,0,0,smooth=True,
+                                  fill='#2b2b2b',outline='',tags='surface')
+        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-24))
+    input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
     photos = []
     def refresh():
         for child in previews.winfo_children(): child.destroy()
         photos.clear()
-        for item in attachments:
+        for index,item in enumerate(attachments):
             try:
                 with Image.open(item) as im:
                     im.thumbnail((92, 68))
@@ -54,9 +82,9 @@ def show(thread, path, write_plan, on_ready=None):
                 photos.append(photo)
                 b = RoundedButton(previews, image=photo, padx=6, pady=6,
                               command=lambda p=item: remove(p))
-                b.pack(side='left', padx=(0, 8))
+                b.grid(row=index//3,column=index%3,padx=(0,8),pady=(0,4))
             except (OSError, ValueError):
-                label(previews, '图片无法读取', '#ff9a9a').pack(side='left')
+                label(previews, '图片无法读取', '#ff9a9a').grid(row=index//3,column=index%3)
     def remove(item):
         attachments.remove(item); refresh()
     def add_image(im):
@@ -73,6 +101,22 @@ def show(thread, path, write_plan, on_ready=None):
                 with Image.open(item) as im: add_image(im)
             except (OSError, ValueError) as error:
                 messagebox.showerror('无法添加图片', str(error), parent=root)
+    def add_file(item):
+        source=Path(item)
+        if not source.is_file():raise OSError('请选择文件，不能添加文件夹。')
+        folder=path.parent/'files'/thread/uuid.uuid4().hex
+        folder.mkdir(parents=True,exist_ok=True)
+        target=folder/source.name
+        try:shutil.copy2(source,target)
+        except OSError:
+            target.unlink(missing_ok=True)
+            folder.rmdir()
+            raise
+        files.append(str(target));refresh_files()
+    def choose_files():
+        for item in filedialog.askopenfilenames(parent=root,title='添加文件',filetypes=[('所有文件','*.*')]):
+            try:add_file(item)
+            except OSError as error:messagebox.showerror('无法添加文件',str(error),parent=root)
     def paste(event=None):
         try:
             clip = ImageGrab.grabclipboard()
@@ -80,7 +124,9 @@ def show(thread, path, write_plan, on_ready=None):
                 add_image(clip); return 'break'
             if isinstance(clip, list):
                 for item in clip:
-                    with Image.open(item) as im: add_image(im)
+                    try:
+                        with Image.open(item) as im: add_image(im)
+                    except (OSError,ValueError):add_file(item)
                 return 'break'
         except (OSError, ValueError) as error:
             messagebox.showerror('无法粘贴图片', str(error), parent=root)
@@ -91,23 +137,27 @@ def show(thread, path, write_plan, on_ready=None):
         hint.configure(text='截图后回到这里，按 Ctrl+V 添加截图')
     def save(event=None):
         text = editor.get('1.0', 'end').strip()
-        if not text and not attachments:
-            messagebox.showinfo('请输入需求', '填写需求或添加截图后保存。', parent=root); return
-        if any(not Path(p).is_file() for p in attachments):
-            messagebox.showerror('图片不存在', '请移除无法读取的图片后重新添加。', parent=root); return
+        if not text and not attachments and not files:
+            messagebox.showinfo('请输入需求', '填写需求或添加附件后保存。', parent=root); return
+        if any(not Path(p).is_file() for p in attachments + files):
+            messagebox.showerror('附件不存在', '请移除无法读取的附件后重新添加。', parent=root); return
         try:
-            write_plan(path, {'threadId': thread, 'text': text, 'images': attachments,
+            write_plan(path, {'threadId': thread, 'text': text, 'images': attachments, 'files': files,
                               'status': 'saved', 'savedAt': time.time()})
         except OSError as error:
             messagebox.showerror('保存失败', str(error), parent=root); return
         root.destroy()
-    button(bottom, '+ 图片', choose).pack(side='left')
+    add_button=button(bottom,'+ 添加',lambda:menu.tk_popup(add_button.winfo_rootx(),add_button.winfo_rooty()-48))
+    add_button.pack(side='left')
+    menu=tk.Menu(root,tearoff=False,bg='#2b2b2b',fg='#eeeeee',activebackground='#365c91',activeforeground='white')
+    menu.add_command(label='添加图片',command=choose)
+    menu.add_command(label='添加文件',command=choose_files)
     button(bottom, '截图', screenshot).pack(side='left', padx=8)
     button(bottom, '保存后续任务 ↑', save, True).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     root.bind('<Escape>', lambda e: root.destroy())
-    refresh()
+    refresh();refresh_files()
     editor.focus_set()
     def reveal():
         root.deiconify()
