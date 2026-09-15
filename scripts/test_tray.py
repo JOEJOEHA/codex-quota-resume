@@ -17,9 +17,11 @@ rect=w.RECT()
 result=c.windll.shell32.Shell_NotifyIconGetRect(c.byref(identity),c.byref(rect))
 assert result>=0,result
 assert rect.right>rect.left and rect.bottom>rect.top
-root.withdraw();root.update()
+c.windll.user32.SendMessageW(tray.hwnd,0x10,0,0)
+root.after(150,lambda:ready.set(False));root.wait_variable(ready)
+assert c.windll.user32.IsWindow(tray.hwnd) and not root.winfo_viewable()
 c.windll.user32.SendMessageW(tray.hwnd,tray.message,1,0x202)
-root.update()
+root.after(150,lambda:ready.set(True));root.wait_variable(ready)
 assert root.winfo_viewable()
 tray.on_exit()
 assert not tray.active

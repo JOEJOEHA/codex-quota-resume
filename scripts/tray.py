@@ -1,6 +1,7 @@
 """Windows notification-area icon, using the Tk window's message loop."""
 import ctypes as c
 from ctypes import wintypes as w
+from queue import SimpleQueue
 from window_ui import window_handle
 
 
@@ -15,6 +16,7 @@ class IconData(c.Structure):
 class TrayIcon:
     def __init__(self,root,on_exit):
         self.root=root
+        self.events=SimpleQueue()
         self.on_exit=on_exit
         self.user=c.windll.user32
         self.shell=c.windll.shell32
@@ -27,7 +29,7 @@ class TrayIcon:
         self.user.AppendMenuW.argtypes=[w.HMENU,w.UINT,c.c_size_t,w.LPCWSTR]
         self.user.TrackPopupMenu.argtypes=[w.HMENU,w.UINT,c.c_int,c.c_int,c.c_int,w.HWND,c.c_void_p]
         self.user.DestroyMenu.argtypes=[w.HMENU]
-        root.update_idletasks()
+        root.update()
         self.hwnd=window_handle(root)
         self.message=0x8001
         self.restart=self.user.RegisterWindowMessageW('TaskbarCreated')
@@ -43,6 +45,16 @@ class TrayIcon:
             self.user.SetWindowLongPtrW(self.hwnd,-4,self.previous)
             raise OSError('无法创建系统托盘图标')
         root.bind('<Destroy>',self.close,add='+')
+        self.poll()
+
+    def poll(self):
+        while not self.events.empty():
+            action=self.events.get()
+            if action=='show':self.restore()
+            elif action=='hide':self.root.withdraw()
+            elif action=='menu':self.menu()
+            if not self.active:return
+        self.timer=self.root.after(100,self.poll)
 
     def restore(self):
         self.root.deiconify()
@@ -51,11 +63,14 @@ class TrayIcon:
         self.user.SetForegroundWindow(self.hwnd)
 
     def handle(self,hwnd,message,wp,lp):
+        if message==0x10:  # Also keep the tray alive for Alt+F4 / taskbar Close.
+            self.events.put('hide')
+            return 0
         if message==self.restart:
             self.shell.Shell_NotifyIconW(0,c.byref(self.data))
         elif message==self.message:
-            if lp==0x202:self.root.after_idle(self.restore)  # Left button up.
-            elif lp==0x205:self.root.after_idle(self.menu)
+            if lp==0x202:self.events.put('show')  # Never reenter Tcl from WndProc.
+            elif lp==0x205:self.events.put('menu')
             return 0
         return self.user.CallWindowProcW(self.previous,hwnd,message,wp,lp)
 
@@ -74,6 +89,7 @@ class TrayIcon:
     def close(self,event=None):
         if event is not None and event.widget!=self.root:return
         if self.active:
+            self.root.after_cancel(self.timer)
             self.shell.Shell_NotifyIconW(2,c.byref(self.data))
             self.user.SetWindowLongPtrW(self.hwnd,-4,self.previous)
             self.active=False

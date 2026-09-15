@@ -17,7 +17,7 @@
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.14/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.14)
+[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.15/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.15)
 
 主界面最小化或关闭后保留在系统托盘，点击循环箭头图标恢复，右键可打开或退出界面。退出界面不停止后台计划任务；若有打开的草稿，关闭草稿后再退出。输入框仍可从任务栏恢复。
 

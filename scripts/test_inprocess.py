@@ -30,6 +30,7 @@ def loop(root,*args,**kwargs):
     def check():
         try:
             started=time.perf_counter()
+            assert root.tray.hwnd.value==window_handle(root).value
             button(root,'打开需求输入框').invoke();root.update()
             dialogs=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel)]
             assert len(dialogs)==1
