@@ -37,6 +37,7 @@ def mainloop(root):
             root.withdraw()
             root.tray.target.open_(None)
             assert not root.winfo_viewable()  # Native callback only enqueues.
+            root.after_cancel(root.tray.timer)
             root.tray.poll()
             root.update()
             assert root.winfo_viewable()
@@ -64,6 +65,7 @@ def mainloop(root):
             output.parent.mkdir(exist_ok=True)
             ImageGrab.grab().save(output)
             root.tray.target.exit_(None)
+            root.after_cancel(root.tray.timer)
             root.tray.poll();root.update()
             assert root.winfo_exists() and dialog.winfo_exists()  # Exit keeps open draft alive.
             button(dialog,'保存后续任务 ↑').invoke()

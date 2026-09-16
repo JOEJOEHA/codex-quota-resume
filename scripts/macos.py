@@ -4,6 +4,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 LABELS = ('com.codexquota.watcher', 'com.codexquota.backup')
@@ -59,10 +60,10 @@ def install(w):
                             w.APP_DIR, executable)
         loaded = launchctl('print', domain + '/' + label, check=False).returncode == 0
         if loaded and (not path.exists() or plistlib.loads(path.read_bytes()) != value):
-            raise RuntimeError('已加载的监控配置不同。为保留正在执行的任务，请先暂停监控，注销并重新登录后再更新。')
+            raise RuntimeError('已加载的监控路径或环境不同。请使用原安装路径；更换路径需在确认任务结束后手动重新注册 LaunchAgent。当前监控未停止。')
         jobs.append((label, path, value, loaded))
     state = w.load_state()
-    state.setdefault('monitoringSince', __import__('time').time())
+    state.setdefault('monitoringSince', time.time())
     w.save_state(state)
     for label, path, value, loaded in jobs:
         if not loaded:

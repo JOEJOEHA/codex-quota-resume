@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 import quota_watcher as w
+patch.object(w,'find_codex',return_value='codex').start()
 patch.object(w.codex_status,"ready",return_value="available").start()
 patch.object(w.codex_status,"backup_candidate",side_effect=lambda exe,sent,since=0: w.latest_candidate(time.time(),sent,since)).start()
 

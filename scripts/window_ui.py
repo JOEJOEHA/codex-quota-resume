@@ -207,6 +207,12 @@ def place_beside(dialog,parent):
 
 def minimize(root):
     if sys.platform == 'darwin':
+        root.overrideredirect(False)
+        def mapped(event):
+            if event.widget == root and root.state() == 'normal':
+                root.overrideredirect(True)
+                root.unbind('<Map>',binding)
+        binding=root.bind('<Map>',mapped,add='+')
         root.iconify()
         return
     configure_taskbar(root)
