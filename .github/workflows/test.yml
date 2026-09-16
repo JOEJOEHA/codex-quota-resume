@@ -17,3 +17,4 @@ jobs:
       - run: python scripts/test_live_status.py
       - run: python scripts/test_popup.py
       - run: python scripts/test_app.py
+      - run: python scripts/test_updater.py
