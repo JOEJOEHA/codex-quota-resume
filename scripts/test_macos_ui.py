@@ -63,6 +63,9 @@ def mainloop(root):
                 root.update()
             def finish():
                 try:
+                    previews=[x for x in walk(dialog) if isinstance(x,tk.Button) and getattr(x,'content_image',None) is not None]
+                    assert len(previews)==7 and all(x.winfo_ismapped() for x in previews)
+                    print('Preview geometry:',[(x.winfo_rootx(),x.winfo_rooty(),x.winfo_width(),x.winfo_height()) for x in previews])
                     output = Path('build/macos-ui.png')
                     output.parent.mkdir(exist_ok=True)
                     ImageGrab.grab().save(output)

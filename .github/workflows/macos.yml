@@ -27,6 +27,7 @@ jobs:
           python scripts/test_popup.py
           python scripts/test_placement.py
           python scripts/test_macos.py
+          python scripts/test_macos_launchd.py
       - name: Native UI smoke check
         run: |
           python scripts/test_macos_ui.py
