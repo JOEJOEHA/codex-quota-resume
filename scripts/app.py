@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
+import updater
 import plan_dialog  # Load the composer once with the application.
 if sys.platform == 'darwin':
     from tray_macos import TrayIcon
@@ -128,6 +129,8 @@ def show():
         else:root.destroy()
     root.protocol('WM_DELETE_WINDOW',close_main)
     frame=rounded_window(root,430,535)
+    footer=tk.Frame(frame,bg='#181818');footer.pack(side='bottom',fill='x',pady=(8,0))
+    tk.Label(footer,text='v'+updater.VERSION,bg='#181818',fg='#999999',font=(FONT_FAMILY,9)).pack(side='left')
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TScrollbar',background='#383838',troughcolor='#242424',
                     bordercolor='#242424',arrowcolor='#aaaaaa',lightcolor='#383838',darkcolor='#383838')
@@ -163,6 +166,12 @@ def show():
             try:results.put(('ok',job()))
             except Exception as error:results.put(('error',str(error)))
         threading.Thread(target=work,daemon=True).start()
+    def check_update():
+        if busy[0]:return
+        update_button.configure(text='更新中…')
+        background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
+    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5)
+    update_button.pack(side='right')
     def button(parent,text,command,blue=False):
         b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=(FONT_FAMILY,10),padx=10)
         b.pack(side='left',padx=(0,6));return b
@@ -244,7 +253,17 @@ def show():
                 monitor_dot.itemconfigure(dot,image=dot_images[enabled])
                 enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',
                                         bg='#21854d' if enabled else '#2d6acb')
+            elif kind=='update-progress':
+                note.configure(text=value)
+            elif isinstance(value,dict) and 'updated' in value:
+                busy[0]=False
+                update_button.configure(text='检查更新')
+                note.configure(text=('已安装 '+value['version'] if value['updated'] else '当前已是最新版本。'))
+                if value['updated']:
+                    exit_interface()
+                    if not open_plans:return
             elif kind=='error':
+                update_button.configure(text='检查更新')
                 busy[0]=False
                 note.configure(text='操作失败，详情已显示');messagebox.showerror('操作失败',value,parent=root)
             elif isinstance(value,list):
@@ -279,11 +298,16 @@ def main():
     parser.add_argument('--self-test',action='store_true')
     parser.add_argument('--install',action='store_true')
     parser.add_argument('--doctor',action='store_true')
+    parser.add_argument('--apply-update',action='store_true')
     args=parser.parse_args()
     if args.doctor:
         if sys.platform != 'darwin':raise RuntimeError('--doctor requires macOS')
         import macos
         print(json.dumps(macos.doctor(w),ensure_ascii=False,indent=2))
+    elif args.apply_update:
+        if sys.platform != 'win32':raise RuntimeError('Automatic installation currently requires Windows')
+        w.self_test()
+        updater.activate(sys.executable,run_command)
     elif args.install:
         install()
     elif args.self_test:

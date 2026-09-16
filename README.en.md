@@ -91,3 +91,7 @@ The app reads local Codex logs, local App Server state and live quota using the 
 Network outages, expired login, required approvals, API changes and hung processes can prevent recovery. Backup monitoring still shares the OS, Python, Codex and network. When startup cannot be confirmed, avoiding duplicate execution takes priority. No guaranteed recovery is promised.
 
 Multiple composers are tiled in opening order on the same side of the main window, with 6-pixel gaps. The group can move or wrap into rows without overlap. If the work area is full, the app asks you to save and close or minimize a composer instead of overlapping windows or moving drafts off-screen.
+
+### In-app updates (Windows)
+
+The bottom-left corner shows the version. Click the bottom-right update button to download a newer GitHub release, verify SHA256 and install it automatically. The new app opens after installation; existing draft windows remain available for saving. Saved tasks, attachments and monitor enabled/paused state are preserved. macOS developer previews still require manual download.

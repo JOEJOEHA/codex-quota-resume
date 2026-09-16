@@ -29,6 +29,11 @@ def loop(root,*args,**kwargs):
     root.report_callback_exception=lambda kind,error,tb:errors.append(error)
     def check():
         try:
+            version_label=next(w for w in walk(root) if isinstance(w,tk.Label) and w.cget('text')=='v'+app.updater.VERSION)
+            update_button=button(root,'检查更新')
+            assert version_label.winfo_viewable() and update_button.winfo_viewable()
+            assert version_label.winfo_rootx()<update_button.winfo_rootx()
+            assert update_button.winfo_rooty()+update_button.winfo_height()<=root.winfo_rooty()+root.winfo_height()
             started=time.perf_counter()
             assert root.tray.hwnd.value==window_handle(root).value
             button(root,'打开需求输入框').invoke();root.update()

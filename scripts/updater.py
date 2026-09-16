@@ -1,0 +1,132 @@
+"""GitHub release updates; keep running binaries and user data intact."""
+import base64
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import urllib.request
+
+VERSION = '3.0.0-beta.16'
+REPO = 'joejoeha/codex-quota-resume'
+ASSET = 'CodexQuotaResume.exe'
+
+
+def version(value):
+    match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?', value)
+    if not match:
+        return None
+    major, minor, patch, beta = match.groups()
+    return int(major), int(minor), int(patch), beta is None, int(beta or 0)
+
+
+def fetch(url):
+    return urllib.request.urlopen(urllib.request.Request(url, headers={
+        'User-Agent': 'CodexQuotaResume/' + VERSION}), timeout=60)
+
+
+def asset_url(release, name):
+    expected = f'https://github.com/{REPO}/releases/download/{release["tag_name"]}/{name}'
+    asset = next((a for a in release['assets'] if a['name'] == name), None)
+    if not asset or asset.get('browser_download_url') != expected:
+        raise RuntimeError('GitHub 发布附件缺失或下载地址不匹配。')
+    return expected
+
+
+def activate(executable, run_command):
+    """Change only task actions; retain triggers, enabled state and running jobs."""
+    target = str(Path(executable).resolve()).replace("'", "''")
+    script = r"""
+$ErrorActionPreference='Stop'
+$target='TARGET'
+$previous=@()
+try {
+  $names=@('Codex Quota Resume Watcher','Codex Quota Resume Backup')
+  $arguments=@('--monitor','--monitor --backup')
+  for($i=0;$i -lt 2;$i++) {
+    $task=Get-ScheduledTask -TaskName $names[$i] -ErrorAction SilentlyContinue
+    if($task) {
+      $previous+=@{Name=$names[$i];Actions=$task.Actions}
+      $action=New-ScheduledTaskAction -Execute $target -Argument $arguments[$i] -WorkingDirectory (Split-Path $target)
+      Set-ScheduledTask -TaskName $names[$i] -Action $action | Out-Null
+    }
+  }
+  $path=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Codex Quota Resume.lnk'
+  $shortcut=(New-Object -ComObject WScript.Shell).CreateShortcut($path)
+  $shortcut.TargetPath=$target
+  $shortcut.Arguments=''
+  $shortcut.WorkingDirectory=Split-Path $target
+  $shortcut.IconLocation=$target+',0'
+  $shortcut.Save()
+} catch {
+  foreach($old in $previous) { Set-ScheduledTask -TaskName $old.Name -Action $old.Actions | Out-Null }
+  throw
+}
+""".replace('TARGET', target)
+    run_command(['powershell.exe', '-NoProfile', '-NonInteractive', '-EncodedCommand',
+                 base64.b64encode(script.encode('utf-16le')).decode('ascii')])
+
+
+def update(directory, progress=lambda text: None, current=VERSION):
+    if os.name != 'nt':
+        raise RuntimeError('macOS 开发预览暂不支持自动安装，请从 GitHub Releases 下载。')
+    import msvcrt
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / 'update.lock').open('a+b') as lock:
+        lock.seek(0)
+        try:
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            raise RuntimeError('另一个窗口正在更新，请稍后重试。')
+        progress('正在检查 GitHub 新版本…')
+        with fetch(f'https://api.github.com/repos/{REPO}/releases?per_page=100') as response:
+            releases = json.load(response)
+        candidates = [r for r in releases if not r['draft'] and version(r['tag_name'])
+                      and version(r['tag_name']) > version(current)
+                      and {ASSET, 'SHA256SUMS.txt'} <= {a['name'] for a in r['assets']}]
+        if not candidates:
+            return {'updated': False, 'version': current}
+        release = max(candidates, key=lambda r: version(r['tag_name']))
+        tag = release['tag_name']
+        with fetch(asset_url(release, 'SHA256SUMS.txt')) as response:
+            sums = response.read().decode('utf-8-sig')
+        matches = re.findall(r'^([a-fA-F0-9]{64})\s+\*?' + re.escape(ASSET) + r'\s*$', sums, re.M)
+        if len(matches) != 1:
+            raise RuntimeError('发布版本缺少有效 SHA256 校验值。')
+        expected = matches[0].lower()
+        destination = directory / 'versions' / tag / ASSET
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        progress('正在下载 ' + tag + '…')
+        with tempfile.NamedTemporaryFile(dir=destination.parent, suffix='.download', delete=False) as output:
+            temporary = Path(output.name)
+            try:
+                digest = hashlib.sha256()
+                with fetch(asset_url(release, ASSET)) as response:
+                    while chunk := response.read(1024 * 1024):
+                        output.write(chunk)
+                        digest.update(chunk)
+            except BaseException:
+                output.close()
+                temporary.unlink(missing_ok=True)
+                raise
+        try:
+            if digest.hexdigest() != expected:
+                raise RuntimeError('下载校验失败，未安装；请重新点击更新。')
+            if destination.exists():
+                if hashlib.sha256(destination.read_bytes()).hexdigest() != expected:
+                    raise RuntimeError('本地同版本文件不一致，未覆盖正在使用的程序。')
+            else:
+                temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+        progress('校验通过，正在安装 ' + tag + '…')
+        environment = dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT='1')
+        result = subprocess.run([str(destination), '--apply-update'], env=environment,
+                                creationflags=subprocess.CREATE_NO_WINDOW, timeout=180)
+        if result.returncode:
+            raise RuntimeError('安装切换失败，旧窗口已保留，请查看运行记录。')
+        subprocess.Popen([str(destination)], env=environment)
+        return {'updated': True, 'version': tag}
