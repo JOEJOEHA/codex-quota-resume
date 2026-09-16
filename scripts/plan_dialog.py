@@ -7,7 +7,7 @@ import uuid
 import ctypes
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, ttk, font as tkfont
 from PIL import Image, ImageGrab, ImageTk
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, place_beside
 
@@ -25,7 +25,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if event.widget==root:
             for timer in timers:root.after_cancel(timer)
     root.bind('<Destroy>',cancel_timers,add='+')
-    root.title('续跑后还想跑什么任务')
+    root.title('任务输入框')
     body = rounded_window(root, 430, 535)
     font = ('Microsoft YaHei UI', 11)
     def label(parent, text, color='#eeeeee', size=11):
@@ -35,11 +35,23 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     def button(parent, text, command, accent=False):
         return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
-    title = label(top, '续跑后的任务', size=16); title.pack(side='left')
+    title = label(top, '任务输入框', size=16); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
     label(body, '保存：等待验收完成 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10).pack(anchor='w', pady=(8, 2))
-    label(body, task_name or old.get('taskName') or '当前任务', '#aaaaaa', 11).pack(anchor='w')
+    # A thread without a name can supply its entire prompt as the preview.
+    # Keep that metadata on one line so the editable area always remains visible.
+    caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
+    task_label = label(body, '', '#aaaaaa', 11)
+    task_label.configure(height=1, wraplength=0, anchor='w')
+    task_label.pack(fill='x')
+    caption_font = tkfont.Font(font=task_label.cget('font'))
+    def fit_caption(event):
+        short = caption[:60]
+        while short and caption_font.measure(short + ('…' if short != caption else '')) > event.width:
+            short = short[:-1]
+        task_label.configure(text=short + ('…' if short != caption else ''))
+    task_label.bind('<Configure>', fit_caption)
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
     hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 11)
     hint.pack(side='bottom', anchor='w', pady=(8, 0))

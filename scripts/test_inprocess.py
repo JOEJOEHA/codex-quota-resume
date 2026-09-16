@@ -9,7 +9,7 @@ import tkinter as tk
 from pathlib import Path
 from unittest.mock import patch
 from contextlib import contextmanager
-from PIL import Image
+from PIL import Image, ImageGrab
 import app
 import plan_dialog
 from window_ui import window_handle,minimize,TaskPicker
@@ -17,7 +17,7 @@ from window_ui import window_handle,minimize,TaskPicker
 thread='00000000-0000-0000-0000-000000000001'
 @contextmanager
 def connection(*args):
-    yield lambda *args:{'data':[{'id':thread,'name':'Integration task'},{'id':'00000000-0000-0000-0000-000000000002','name':'Other task'}]}
+    yield lambda *args:{'data':[{'id':thread,'name':'Integration task'},{'id':'00000000-0000-0000-0000-000000000002','preview':'很长的任务摘要，不应该占据输入区。\n'*100}]}
 def walk(widget):
     yield widget
     for child in widget.winfo_children():yield from walk(child)
@@ -57,6 +57,20 @@ def loop(root,*args,**kwargs):
             picker.current(1);button(root,'打开需求输入框').invoke();root.update()
             others=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel) and w!=dialog]
             assert len(others)==1 and others[0].tk is root.tk
+            long_dialog=others[0]
+            assert long_dialog.title()=='任务输入框'
+            long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))
+            assert long_editor.winfo_viewable() and long_editor.winfo_height()>=100
+            for action in ('保存后续任务 ↑','现在发送 ↑','+ 添加','截图'):
+                control=button(long_dialog,action)
+                assert control.winfo_viewable()
+                assert control.winfo_rooty()+control.winfo_height()<=long_dialog.winfo_rooty()+long_dialog.winfo_height()
+            long_editor.insert('1.0','这里可以直接输入需求；任务摘要再长，也不会挤掉输入框。')
+            root.update()
+            evidence=Path(__file__).resolve().parent.parent/'build'/'composer-long-preview.png'
+            evidence.parent.mkdir(exist_ok=True)
+            x,y=long_dialog.winfo_rootx(),long_dialog.winfo_rooty()
+            ImageGrab.grab((x,y,x+long_dialog.winfo_width(),y+long_dialog.winfo_height())).save(evidence)
             button(others[0],'×').invoke();root.update()
             assert dialog.winfo_exists()
             picker.current(0)
