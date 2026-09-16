@@ -28,6 +28,7 @@ M1/M2/M3 使用 arm64 包，Intel 使用 x86_64 包；不能声称每种芯片�
 核心文件：scripts/app.py、plan_dialog.py、window_ui.py、quota_watcher.py、codex_status.py、macos.py、tray_macos.py、build_macos.py，以及 .github/workflows/macos.yml。原生事件回调必须入队交给 Tk 主循环，不能直接重入 GUI。现有 Cocoa 重绘和 Canvas 缩略图修复应保留，除非证据证明需要替换。
 
 三、不得改变的业务及界面要求
+补充（2026-09-16 后续修复）：“保存后续任务”仍受下述完成条件限制；新增“现在发送”是用户明确的新指令请求，在会话正常结束且额度可用后发送，不要求历史续跑或完成标记。主备独立扫描保存记录。CLI 明确拒绝 queue 图片参数时，保留图片副本并把本地路径交给原会话读取。保留这些修复和回归测试。
 - 仅恢复明确因额度耗尽中断、仍未完成的原任务；发送前读实时额度。仅额度为零、普通网络错误、正常完成都不能触发。继续原会话，不新建任务、不改模型、不买额度。
 - 主备监控共享锁和发送记录，防止重复发送。默认 exec resume；仅桌面写入者冲突才尝试 queue。入队不等于启动或完成，必须保留后续状态确认。
 - 后续文字/图片/文件只是保存，不立即发送；被恢复的原任务完成验收并出现 [QUOTA_RESUME_GOAL_COMPLETE] 且额度可用，才允许发送后续任务。附件复制到本地，原文件移走后仍可用；图片不设固定六张上限，横向滚动，点击移除；文件双击/Delete 移除。
@@ -72,6 +73,7 @@ M1/M2/M3 use arm64; Intel uses x86_64. Individual chip models have not all been 
 Key files under scripts/: app.py, plan_dialog.py, window_ui.py, quota_watcher.py, codex_status.py, macos.py, tray_macos.py, build_macos.py. Also read .github/workflows/macos.yml. Native callbacks must enqueue actions for Tk's main loop, never reenter GUI code directly. Keep existing Cocoa repaint and Canvas thumbnail fixes unless evidence justifies changing them.
 
 3. Required behavior
+Follow-up fix added on 2026-09-16: Save Follow-up retains the completion gates below. Send Now is an explicit new-instruction request, sent after normal session completion and live quota availability without requiring prior quota resumption or a completion marker. Both monitors independently scan saved plans. When the CLI explicitly rejects queue image arguments, retain the copied images and send their local paths to the original session for reading. Preserve these fixes and regression tests.
 Resume only explicitly quota-interrupted, unfinished original work after checking live quota. Zero quota alone, normal completion and ordinary network errors must not trigger resumption. Keep the same session; do not create sessions, change models or buy quota.
 Both watchers share locking and send records. Use exec resume by default; queue only on desktop writer conflict. Queue acceptance is neither startup nor completion; retain subsequent confirmation.
 Saving follow-up text/images/files must not send immediately. Send only after the watcher-resumed original goal is accepted as complete with [QUOTA_RESUME_GOAL_COMPLETE] and quota is available. Copy attachments into local storage; moving/deleting originals must not break them. No fixed six-image limit; horizontal previews, click-to-remove images, double-click/Delete for ordinary files.

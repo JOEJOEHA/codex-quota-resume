@@ -218,7 +218,16 @@ def show():
            'waiting-start':'等待任务开始确认','dispatch-unconfirmed':'任务尚未确认开始，请查看运行记录',
            'dispatch-active':'原任务正在执行','resume-failed':'续跑失败，请查看运行记录',
            'retry-backoff':'上次启动失败，等待重试','task-changed':'任务状态已变化',
-           'followup-sent':'后续需求已发送','followup-waiting-completion':'等待原任务完成验收'}
+           'followup-sent':'后续需求已发送','followup-waiting-completion':'已保存，等待原任务的验收完成标记',
+           'followup-waiting-resume':'已保存，等待原任务续跑并完成验收',
+           'followup-waiting-idle':'已保存，等待原任务结束',
+           'followup-waiting-quota':'已保存，等待额度可用',
+           'followup-queued':'已交给 Codex，等待后续任务开始',
+           'followup-waiting-evidence':'已保存，暂时无法读取原任务记录',
+           'followup-send-failed':'后续任务发送失败，请查看记录',
+           'followup-unconfirmed':'发送结果待确认，请勿重复发送',
+           'followup-missing-image':'图片丢失，请重新添加',
+           'followup-missing-file':'附件丢失，请重新添加'}
     def tick():
         refresh_pending()
         state=w.load_state();code=state.get('status','not-installed')

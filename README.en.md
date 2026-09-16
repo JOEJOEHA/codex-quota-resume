@@ -30,6 +30,8 @@ Download from [Releases](https://github.com/JOEJOEHA/codex-quota-resume/releases
 
 Monitoring makes no model calls. Resumed work and follow-ups consume normal Codex quota.
 
+“保存后续任务” (Save Follow-up) keeps the completion gates above. “现在发送 ↑” (Send Now) explicitly requests a new instruction on the next monitor check once the session has ended normally and live quota is available; this explicit action does not require a prior quota interruption or completion marker. Both watchers scan saved plans independently of the current resume record and expose waiting reasons. If the desktop owns the session and the CLI explicitly rejects queued image attachments, the original session receives the copied images' local paths with the text so it can open them. Queue acceptance is tracked separately from observed startup and is never retried blindly.
+
 ## Windows installation and controls
 
 Run the EXE and click **启用 / 更新监控 (Enable / Update Monitoring)**. A compatible signed-in Codex CLI is required, including `exec resume`, `app-server --stdio`, `account/rateLimits/read` and the experimental `thread/turns/list` interface.
