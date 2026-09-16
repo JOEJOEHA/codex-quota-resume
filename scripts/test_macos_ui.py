@@ -73,6 +73,9 @@ def mainloop(root):
                     screenshot=ImageGrab.grab()
                     screenshot.save(output)
                     sx,sy=screenshot.width/root.winfo_screenwidth(),screenshot.height/root.winfo_screenheight()
+                    mx,my=root.winfo_rootx(),root.winfo_rooty()
+                    main_pixels=screenshot.crop((int((mx+28)*sx),int((my+22)*sy),int((mx+402)*sx),int((my+491)*sy))).convert('RGB')
+                    assert sum(count for count,(r,g,b) in main_pixels.getcolors(main_pixels.width*main_pixels.height) if min(r,g,b)>150)>200, 'Main window content was not painted'
                     x,y=preview.winfo_rootx(),preview.winfo_rooty()
                     region=screenshot.crop((int(x*sx),int(y*sy),int((x+preview.winfo_width())*sx),int((y+preview.winfo_height())*sy))).convert('RGB')
                     colors=region.getcolors(region.width*region.height)

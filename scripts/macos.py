@@ -105,6 +105,26 @@ def clipboard_files():
     return [str(url.path()) for url in urls if url.isFileURL()]
 
 
+def repaint_on_layout(root):
+    """Invalidate Cocoa's whole backing view after transparent Tk windows relayout."""
+    from AppKit import NSApplication
+    timer=[None]
+    def repaint():
+        timer[0]=None
+        for window in NSApplication.sharedApplication().windows():
+            view=window.contentView()
+            if view is not None:view.setNeedsDisplay_(True)
+    def schedule(event=None):
+        if timer[0] is None:timer[0]=root.after_idle(repaint)
+    def close(event):
+        if event.widget==root and timer[0] is not None:
+            root.after_cancel(timer[0]);timer[0]=None
+    root.bind('<Configure>',schedule,add='+')
+    root.bind('<Map>',schedule,add='+')
+    root.bind('<Destroy>',close,add='+')
+    schedule()
+
+
 def work_area(x, y):
     from AppKit import NSScreen
     screens = list(NSScreen.screens())

@@ -272,4 +272,7 @@ def rounded_window(root,width,height):
     bind_drag(root,canvas,body)
     root.bind('<Map>',lambda event:root.after_idle(lambda:configure_taskbar(root)) if event.widget==root else None,add='+')
     root.after(0,lambda:configure_taskbar(root))
+    if sys.platform == 'darwin':
+        from macos import repaint_on_layout
+        repaint_on_layout(root)
     return body
