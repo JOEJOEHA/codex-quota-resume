@@ -99,3 +99,7 @@ The bottom-left corner shows the version. Click the bottom-right update button t
 ### Automatic composer on quota interruption
 
 The running GUI checks roughly every five seconds for an explicit quota interruption and opens the matching composer, reusing an existing draft. Each interruption prompts once. With the GUI closed, the scheduled monitor opens it on its next check. Zero remaining quota alone, network errors and normal completion do not trigger a popup.
+
+### Follow-up delivery after resuming
+
+Saved follow-ups are requested in the same conversation ten seconds after the resume request is accepted, without waiting for a completion marker or for the running turn to finish. Live quota is still checked. Queued or delivered follow-ups are never replayed. Without a resume event, Save only stores the request; use Send now or Send saved task to submit explicitly.
