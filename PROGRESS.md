@@ -45,7 +45,7 @@ The owner has no Mac. A contributor will continue on their own Mac through a for
 - 已恢复明确额度中断时自动打开任务输入窗：GUI 约 5 秒检测，同进程复用草稿；独占领取文件保证同一中断只弹一次。GUI 未运行时在下次后台检查打开。零额度快照、网络错误及正常完成不触发。
 - Windows beta.24 已安装；源码 main `6386c95`，Windows CI `35163568163` 通过。
 - macOS 分支已同步主分支更新；菜单栏采用第三版奶油色小猫，构建包含图片资源。候选构建提交 `2a38b21`，CI `35163669146`。
-- Release `v3.0.0-beta.24` 正在汇总 Windows 与 macOS 两种架构附件；以最终 Release 页面和 CI 结论为准。
+- Release [v3.0.0-beta.24](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.24) 已公开并设为 Latest：Windows EXE、macOS arm64 / x86_64 ZIP 与 SHA256SUMS.txt 齐全。Mac CI `35163669146` 两种架构成功；下载后的 ZIP 校验值已核对。
 - macOS 仍为开发预览：应用内自动安装尚未移植，使用手动下载替换；目标 Mac 登录及真实额度恢复周期验收仍待完成，不宣称全功能验收。
 
 The latest Windows changes are synchronized to macos-port. macOS packages remain developer previews; in-app automatic installation and signed-in target-device acceptance remain pending. Windows auto-update and quota-popup behavior were locally tested.
