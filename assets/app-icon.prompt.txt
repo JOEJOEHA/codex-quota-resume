@@ -1,1 +1,1 @@
-Minimal clockwise continuation arrow. Single mint stroke #35b99b, transparent background, rounded ends. No tile, gradient, glow, shadow or play triangle. Editable source: app-icon.svg.
+Selected third kitten design: cream round cat face, peach inner ears and blush, brown eyes and smiling mouth. Transparent background. Master asset: app-icon.png; app-icon.ico contains Windows sizes 16 through 256.
