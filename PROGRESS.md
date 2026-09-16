@@ -23,7 +23,9 @@
 
 ## 仍需外部条件
 
-本机是 Windows，尚未连接用户的 Mac。已询问用户是否可提供 Mac 连接方式；不能把未回复当成已有设备或授权。
+用户已确认没有 Mac；后续由朋友在自己的 Mac 上通过 Fork / PR 继续开发和验收。完整中英文交接 prompt 见 [macOS Development Handoff / macOS 开发交接](docs/macos-handoff.md)，贡献身份与流程见 [Contributing / 贡献指南](CONTRIBUTING.md)。
+
+The owner has no Mac. A contributor will continue on their own Mac through a fork and PR. Native CI builds exist, but signed-in target-device and real quota-recovery acceptance remain pending. See the bilingual handoff above; do not report full completion.
 
 下一步在已登录 Codex 的目标 Mac 执行 `--doctor`，确认 CLI 路径、App Server 实验接口及 queue 支持；再验收真实菜单点击、截图权限、Retina/多显示器、重启后后台调度，最后完成“明确额度中断 → 额度恢复 → 原任务验收 → 后续任务发送”的真实完整周期。CI 使用模拟 Codex 响应，不能替代这个验收。
 

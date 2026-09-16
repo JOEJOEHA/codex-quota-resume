@@ -1,6 +1,10 @@
-# Codex Quota Resume · Windows Beta
+# Codex Quota Resume · Codex 额度恢复自动续跑
 
-macOS 移植开发预览见 [构建、兼容检查与待验收项目](docs/macos.md)。Windows 已发布版本保持不变；macOS 尚未完成目标设备及真实额度恢复验收。
+[简体中文](README.md) | [English](README.en.md)
+
+**Windows Beta / macOS Developer Preview（开发预览）**。macOS 源码目前在 [`macos-port`](https://github.com/JOEJOEHA/codex-quota-resume/tree/macos-port)，尚未合并到主分支；不要从 `main` 开始 macOS 开发。macOS 尚未完成目标设备及真实额度恢复验收。
+
+[桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](https://github.com/JOEJOEHA/codex-quota-resume/blob/macos-port/docs/macos.md)
 
 为因额度耗尽而中断的 Codex 任务提供本地自动续跑。主监控读取日志，备用监控直接读取 Codex 任务状态；发送前检查**实时可用额度**，不要求旧日志显示 100%，也不固定多等五分钟。
 
@@ -19,7 +23,9 @@ macOS 移植开发预览见 [构建、兼容检查与待验收项目](docs/macos
 
 ## 下载本地软件（推荐）
 
-[下载 CodexQuotaResume.exe](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/v3.0.0-beta.15/CodexQuotaResume.exe) · [发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/tag/v3.0.0-beta.15)
+[下载 Windows EXE](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/desktop-preview-2026-09-16/CodexQuotaResume.exe) · [Windows / macOS 下载与发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest)
+
+M1 / M2 / M3 等 Apple Silicon 芯片选择 `macOS-arm64-preview.zip`；Intel Mac 选择 `macOS-x86_64-preview.zip`。两种架构均已通过 CI 构建，不代表每种芯片或目标设备都已实机验收。macOS 预览仅有 ad-hoc 签名，尚无 Developer ID 签名与 Apple 公证。
 
 主界面最小化或关闭后保留在系统托盘，点击循环箭头图标恢复，右键可打开或退出界面。退出界面不停止后台计划任务；若有打开的草稿，关闭草稿后再退出。输入框仍可从任务栏恢复。
 
@@ -118,11 +124,9 @@ python -m pip install -r requirements.txt pyinstaller
 
 生成 `dist/CodexQuotaResume.exe`。构建产物及运行记录不提交到源代码仓库。
 
-## English
+## 许可与贡献
 
-Windows-only beta: a local primary watcher and an independent App Server-based backup resume Codex tasks stopped by explicit quota errors when live quota becomes available. Monitoring makes no model calls; resumed work uses normal Codex quota. The EXE bundles Python and Pillow; a compatible signed-in Codex CLI is still required. No guaranteed recovery; experimental APIs may change. See the commands above for installation, lifecycle controls and offline tests.
-
-MIT licensed. This is an independent community project, not an official OpenAI product.
+MIT 许可。这是独立社区项目，非 OpenAI 官方产品。完整英文说明见 [English README](README.en.md)，朋友接手 macOS 请使用 [中英文交接 Prompt](docs/macos-handoff.md) 和 [贡献指南](CONTRIBUTING.md)。
 
 文件附件：在需求弹窗点击“+ 添加 → 添加文件”。文件复制保存到本机，续跑时将本地路径随需求提供给 Codex。双击文件名或选中后按 Delete 移除附件。
 
