@@ -1,4 +1,4 @@
-import json,tempfile
+import json,tempfile,os
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as directory:
    assert not state.get('offeredPlans')
    save.assert_not_called()
   def launch(*args,**kwargs):
-   assert kwargs['startupinfo'].wShowWindow==1
+   assert kwargs['startupinfo'].wShowWindow==1 if os.name=='nt' else kwargs['startupinfo'] is None
    assert kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT']=='1'
    w.write_plan(root/'followups'/(pending['threadId']+'.ready.json'),{'key':'visible-test'})
    return SimpleNamespace(poll=lambda:None)

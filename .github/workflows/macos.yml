@@ -1,0 +1,45 @@
+name: macOS preview
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt pyinstaller
+      - name: Offline watcher and platform checks
+        run: |
+          python scripts/quota_watcher.py --self-test
+          python scripts/test_watcher.py
+          python scripts/test_backup.py
+          python scripts/test_live_status.py
+          python scripts/test_popup.py
+          python scripts/test_placement.py
+          python scripts/test_macos.py
+      - name: Native UI smoke check
+        run: python scripts/test_macos_ui.py
+      - run: python scripts/build_macos.py
+      - name: Frozen watcher smoke check
+        run: dist/CodexQuotaResume.app/Contents/MacOS/CodexQuotaResume --self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macOS-preview-${{ matrix.os }}
+          path: |
+            dist/*-preview.zip
+            dist/*.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macOS-ui-${{ matrix.os }}
+          path: build/macos-ui.png

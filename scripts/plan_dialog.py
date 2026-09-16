@@ -5,15 +5,17 @@ import subprocess
 import time
 import uuid
 import ctypes
+import sys
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageGrab, ImageTk
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, place_beside
+from window_ui import FONT_FAMILY
 
 
 def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, on_saved=None):
-    if parent is None:ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    if parent is None and sys.platform != 'darwin':ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     saved = old.get('status') == 'saved'
     attachments = list(old.get('images', [])) if saved else []
@@ -27,22 +29,23 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     root.bind('<Destroy>',cancel_timers,add='+')
     root.title('续跑后还想跑什么任务')
     body = rounded_window(root, 430, 535)
-    font = ('Microsoft YaHei UI', 11)
+    font = (FONT_FAMILY, 11)
     def label(parent, text, color='#eeeeee', size=11):
-        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size),wraplength=374,justify='left')
+        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=(FONT_FAMILY, size),wraplength=374,justify='left')
         bind_drag(root, item)
         return item
     def button(parent, text, command, accent=False):
         return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
     title = label(top, '续跑后的任务', size=16); title.pack(side='left')
-    window_controls(root,top,font)
+    window_controls(root,top,font,on_close=lambda:close_draft())
     bind_drag(root, top, title)
     label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
     label(body, task_name or old.get('taskName') or '当前任务', '#aaaaaa', 11).pack(anchor='w')
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
     hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 11)
     hint.pack(side='bottom', anchor='w', pady=(8, 0))
+    if sys.platform == 'darwin':hint.configure(text='⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除')
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
@@ -51,9 +54,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     preview_scroll=ttk.Scrollbar(preview_area,orient='horizontal',command=preview_canvas.xview)
     preview_canvas.configure(xscrollcommand=preview_scroll.set)
     previews.bind('<Configure>',lambda e:preview_canvas.configure(scrollregion=preview_canvas.bbox('all')))
-    preview_canvas.bind('<MouseWheel>',lambda e:preview_canvas.xview_scroll(-int(e.delta/120),'units'))
+    preview_canvas.bind('<MouseWheel>',lambda e:preview_canvas.xview_scroll(-int(e.delta if sys.platform=='darwin' else e.delta/120),'units'))
     file_row=tk.Frame(body,bg='#181818')
-    file_list=tk.Listbox(file_row,height=2,bg='#2b2b2b',fg='#eeeeee',font=('Microsoft YaHei UI',9),
+    file_list=tk.Listbox(file_row,height=2,bg='#2b2b2b',fg='#eeeeee',font=(FONT_FAMILY,9),
                          selectbackground='#365c91',relief='flat',highlightthickness=0,exportselection=False)
     file_scroll=tk.Scrollbar(file_row,command=file_list.yview)
     file_list.configure(yscrollcommand=file_scroll.set)
@@ -68,6 +71,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if selected:files.pop(selected[0]);refresh_files()
     file_list.bind('<Double-Button-1>',remove_file)
     file_list.bind('<Delete>',remove_file)
+    if sys.platform == 'darwin':file_list.bind('<BackSpace>',remove_file)
     input_area=tk.Canvas(body,bg='#181818',highlightthickness=0,height=180)
     input_area.pack(fill='both',expand=True,pady=18)
     editor = tk.Text(input_area, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
@@ -131,12 +135,16 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             raise
         files.append(str(target));refresh_files()
     def choose_files():
-        for item in filedialog.askopenfilenames(parent=root,title='添加文件',filetypes=[('所有文件','*.*')]):
+        for item in filedialog.askopenfilenames(parent=root,title='添加文件',filetypes=[('所有文件','*')]):
             try:add_file(item)
             except OSError as error:messagebox.showerror('无法添加文件',str(error),parent=root)
     def paste(event=None):
         try:
-            clip = ImageGrab.grabclipboard()
+            clip = None
+            if sys.platform == 'darwin':
+                from macos import clipboard_files
+                clip = clipboard_files()
+            if not clip:clip = ImageGrab.grabclipboard()
             if isinstance(clip, Image.Image):
                 add_image(clip); return 'break'
             if isinstance(clip, list):
@@ -149,6 +157,16 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             messagebox.showerror('无法粘贴图片', str(error), parent=root)
     def screenshot():
         root.withdraw()
+        if sys.platform == 'darwin':
+            try:process=subprocess.Popen(['/usr/sbin/screencapture','-i','-c'])
+            except OSError as error:
+                root.deiconify();messagebox.showerror('无法截图',str(error),parent=root);return
+            def finished():
+                if process.poll() is None:timers.append(root.after(100,finished));return
+                root.deiconify();root.lift()
+                hint.configure(text='截图完成后按 ⌘V 添加；首次使用请允许系统屏幕录制权限。')
+            timers.append(root.after(100,finished))
+            return
         subprocess.Popen(['explorer.exe', 'ms-screenclip:'])
         timers.append(root.after(1800, root.deiconify))
         hint.configure(text='截图后回到这里，按 Ctrl+V 添加截图')
@@ -181,6 +199,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         window.bind('<Escape>',lambda e:collapse_editor())
         window.bind('<Control-Return>',lambda e:collapse_editor())
         large.bind('<Control-v>',paste)
+        if sys.platform == 'darwin':
+            large.bind('<Command-v>',paste)
+            window.bind('<Command-Return>',lambda e:collapse_editor())
         large.focus_set()
     expand_host=tk.Frame(input_area,bg='#2b2b2b')
     expand_button=RoundedButton(expand_host,text='↗',command=expand_editor,font=font,padx=5,pady=1)
@@ -199,6 +220,17 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             messagebox.showerror('保存失败', str(error), parent=root); return
         if on_saved:on_saved(thread)
         root.destroy()
+    def close_draft():
+        collapse_editor()
+        current=(editor.get('1.0','end-1c').strip(),attachments,files)
+        original=(old.get('text','').strip(),old.get('images',[]),old.get('files',[])) if saved else ('',[],[])
+        if current != original:
+            choice=messagebox.askyesnocancel('保留草稿','保存后续任务后关闭？选择“取消”继续编辑。',parent=root)
+            if choice is None:return
+            if choice:save();return
+        root.destroy()
+    root.protocol('WM_DELETE_WINDOW',close_draft)
+    if parent is None and sys.platform == 'darwin':root.createcommand('tk::mac::Quit',close_draft)
     menu=tk.Canvas(body,width=160,height=110,bg='#181818',highlightthickness=0)
     menu.create_polygon(20,1,140,1,159,1,159,20,159,90,159,109,140,109,
                         20,109,1,109,1,90,1,20,1,1,smooth=True,
@@ -236,11 +268,14 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     root.bind('<Button-1>',dismiss_menu,add='+')
     def escape(event):
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
-        else:root.destroy()
+        else:close_draft()
     button(bottom, '截图', screenshot).pack(side='left', padx=8)
     button(bottom, '保存后续任务 ↑', save, True).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
+    if sys.platform == 'darwin':
+        editor.bind('<Command-v>',paste)
+        root.bind('<Command-Return>',save)
     root.bind('<Escape>',escape)
     refresh();refresh_files()
     editor.focus_set()

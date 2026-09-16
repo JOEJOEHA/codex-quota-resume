@@ -15,7 +15,8 @@ from pathlib import Path
 import codex_status
 
 
-APP_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "CodexQuotaWatcher"
+APP_DIR = (Path.home() / 'Library/Application Support' if sys.platform == 'darwin' else
+           Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))) / "CodexQuotaWatcher"
 STATE_PATH = APP_DIR / "state.json"
 CACHE_PATH = APP_DIR / "session-cache.json"
 SESSION_CACHE = {}
@@ -88,7 +89,7 @@ def dispatch(thread: str, text: str, images=(), cwd=None):
         result = subprocess.run(command, cwd=cwd, stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 encoding='utf-8', errors='replace',
-                                creationflags=subprocess.CREATE_NO_WINDOW)
+                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         result.queued = result.returncode == 0
     return result
 
@@ -96,9 +97,11 @@ def dispatch(thread: str, text: str, images=(), cwd=None):
 def offer_plan(pending: dict, state: dict) -> None:
     if pending['key'] in state.get('offeredPlans', []):
         return
-    startup = subprocess.STARTUPINFO()
-    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup.wShowWindow = 1
+    startup = None
+    if os.name == 'nt':
+        startup = subprocess.STARTUPINFO()
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = 1
     process = subprocess.Popen(self_command('--plan', pending['threadId'], '--plan-key', pending['key']),
                                startupinfo=startup,
                                env={**os.environ, 'PYINSTALLER_RESET_ENVIRONMENT': '1'})
@@ -287,6 +290,9 @@ def latest_candidate(now: float, sent: dict, since=0) -> dict | None:
 
 
 def find_codex() -> str:
+    if sys.platform == 'darwin':
+        from macos import find_codex
+        return find_codex()
     candidates = sorted(CODEX_EXE.glob("*/codex.exe"), key=lambda path: path.stat().st_mtime, reverse=True)
     if candidates:
         return str(candidates[0])
@@ -295,6 +301,11 @@ def find_codex() -> str:
 
 def resume_process_exists(thread: str) -> bool:
     """Check for a child left running after its monitor process exited."""
+    if sys.platform == 'darwin':
+        result = subprocess.run(['/bin/ps', '-axo', 'command='], capture_output=True,
+                                text=True, encoding='utf-8', errors='replace', timeout=20)
+        if result.returncode:raise OSError('Cannot verify running Codex processes')
+        return any(thread in line and 'codex' in line.lower() for line in result.stdout.splitlines())
     result = subprocess.run(
         ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
          'Get-CimInstance Win32_Process -Filter "Name=\'codex.exe\'" -ErrorAction Stop | '
@@ -328,8 +339,16 @@ def recover_unstarted(state: dict, now: float) -> None:
     log(f"backup recovering unstarted thread={active['threadId']}")
 
 
+def lock_monitor(lock):
+    if os.name == 'nt':
+        import msvcrt
+        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
 def run_once(dry_run=False, backup=False) -> str:
-    import msvcrt
     global SESSION_CACHE
     APP_DIR.mkdir(parents=True, exist_ok=True)
     with (APP_DIR / 'monitor.lock').open('a+b') as lock:
@@ -337,9 +356,11 @@ def run_once(dry_run=False, backup=False) -> str:
             lock.write(b'0'); lock.flush()
         lock.seek(0)
         try:
-            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            lock_monitor(lock)
         except OSError:
             return 'monitor-busy'
+        if (APP_DIR / 'paused.flag').exists():
+            return 'paused'
         # Closing this file also releases the OS lock after a crash or reboot.
         try:
             SESSION_CACHE = json.loads(CACHE_PATH.read_text(encoding='utf-8'))

@@ -1,1 +1,2 @@
 Pillow>=10.0
+pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'

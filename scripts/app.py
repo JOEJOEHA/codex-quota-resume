@@ -1,4 +1,4 @@
-"""Windows desktop entry point; frozen builds include Python, Tk and Pillow."""
+"""Desktop entry point; frozen builds include Python, Tk and Pillow."""
 import argparse
 import ctypes
 import json
@@ -18,8 +18,12 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
 import plan_dialog  # Load the composer once with the application.
-from tray import TrayIcon
+if sys.platform == 'darwin':
+    from tray_macos import TrayIcon
+else:
+    from tray import TrayIcon
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle, place_beside
+from window_ui import FONT_FAMILY
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -28,7 +32,7 @@ TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
 def run_command(command):
     result = subprocess.run(command,
                             capture_output=True,text=True,encoding='utf-8',errors='replace',
-                            creationflags=subprocess.CREATE_NO_WINDOW)
+                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
     return result.stdout
@@ -56,12 +60,18 @@ def task_xml(executable, minutes, args):
 
 
 def pause():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.pause(w)
     for name in TASK_NAMES:run_command(['schtasks.exe','/Change','/TN',name,'/DISABLE'])
     (w.APP_DIR/'paused.flag').touch()
     return '已暂停后续调度；正在执行的任务不受影响。'
 
 
 def monitor_indicator():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.monitor_indicator(w)
     try:
         command="$ErrorActionPreference='Stop';$s=New-Object -ComObject Schedule.Service;$s.Connect();"
         command+="@('Codex Quota Resume Watcher','Codex Quota Resume Backup') | ForEach-Object {$s.GetFolder('\\').GetTask($_).Enabled} | ConvertTo-Json -Compress"
@@ -76,6 +86,9 @@ def monitor_indicator():
 
 
 def install():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.install(w)
     if not getattr(sys,'frozen',False):
         raise RuntimeError('请使用打包后的 EXE 启用后台监控，源码用户运行 install_windows.ps1。')
     w.codex_status.available(w.find_codex())
@@ -102,7 +115,7 @@ def install():
 
 
 def show():
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    if os.name == 'nt':ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
     open_plans={}
@@ -120,12 +133,12 @@ def show():
                     bordercolor='#242424',arrowcolor='#aaaaaa',lightcolor='#383838',darkcolor='#383838')
     style.map('TScrollbar',background=[('active','#494949')])
 
-    font=('Microsoft YaHei UI',11)
+    font=(FONT_FAMILY,11)
     def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left',wraplength=374)
+        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
         item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
     top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=(FONT_FAMILY,16))
     title.pack(side='left')
     window_controls(root,top,font,on_close=close_main,on_minimize=root.withdraw)
     monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
@@ -151,11 +164,11 @@ def show():
             except Exception as error:results.put(('error',str(error)))
         threading.Thread(target=work,daemon=True).start()
     def button(parent,text,command,blue=False):
-        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=('Microsoft YaHei UI',10),padx=10)
+        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=(FONT_FAMILY,10),padx=10)
         b.pack(side='left',padx=(0,6));return b
     enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
-    button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
+    button(actions,'打开运行记录',lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]) if sys.platform=='darwin' else os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
     select=TaskPicker(frame,font=font);select.pack(fill='x',pady=(0,12))
     def refresh_pending(blink=False):
@@ -185,7 +198,7 @@ def show():
         if thread in open_plans:
             dialog=open_plans[thread]
             place_beside(dialog,root)
-            ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
+            if os.name == 'nt':ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
             dialog.deiconify();place_beside(dialog,root);dialog.lift();dialog.focus_force()
             return
         task_name=(threads[index].get('name') or threads[index].get('preview') or '当前任务').replace('\n',' ')
@@ -253,8 +266,13 @@ def main():
     parser.add_argument('--plan-key')
     parser.add_argument('--self-test',action='store_true')
     parser.add_argument('--install',action='store_true')
+    parser.add_argument('--doctor',action='store_true')
     args=parser.parse_args()
-    if args.install:
+    if args.doctor:
+        if sys.platform != 'darwin':raise RuntimeError('--doctor requires macOS')
+        import macos
+        print(json.dumps(macos.doctor(w),ensure_ascii=False,indent=2))
+    elif args.install:
         install()
     elif args.self_test:
         w.self_test()

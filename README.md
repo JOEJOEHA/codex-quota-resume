@@ -1,5 +1,7 @@
 # Codex Quota Resume · Windows Beta
 
+macOS 移植开发预览见 [构建、兼容检查与待验收项目](docs/macos.md)。Windows 已发布版本保持不变；macOS 尚未完成目标设备及真实额度恢复验收。
+
 为因额度耗尽而中断的 Codex 任务提供本地自动续跑。主监控读取日志，备用监控直接读取 Codex 任务状态；发送前检查**实时可用额度**，不要求旧日志显示 100%，也不固定多等五分钟。
 
 **这是测试版，不保证所有 Codex 版本和异常场景都能自动恢复。** 已测试实时查询、后台直接续跑、失败处理及防重复；尚未完成新版在真实额度耗尽—恢复周期中的验收。
@@ -80,7 +82,7 @@ python -m pip install -r requirements.txt
 & "$env:LOCALAPPDATA\CodexQuotaWatcher\CodexQuotaResume.exe" --plan <任务UUID>
 ```
 
-`Ctrl+V` 粘贴截图，`Ctrl+Enter` 保存。截图按钮打开 Windows 截图工具，截图后回到输入框粘贴。每个计划最多六张图片。
+`Ctrl+V` 粘贴截图，`Ctrl+Enter` 保存。截图按钮打开 Windows 截图工具，截图后回到输入框粘贴。图片没有固定数量上限，缩略图横向滚动。
 
 后续任务只有在被监控器恢复的原任务明确完成，并输出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后才发送；普通回合结束、取消或等待用户不会触发它。它不是通用任务队列。
 
