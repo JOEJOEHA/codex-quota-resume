@@ -297,7 +297,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     send_row=tk.Frame(body,bg='#181818')
     send_row.pack(side='bottom',fill='x',before=bottom,pady=(12,0))
     action_width=tkfont.Font(font=font).measure('保存后续任务 ↑')+28
-    button(send_row, '现在发送 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(side='right')
+    button(send_row, '现在发送　　 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(side='right')
     button(bottom, '保存后续任务 ↑', save, width_px=action_width).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)

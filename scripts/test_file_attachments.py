@@ -33,7 +33,7 @@ def mainloop(root,*args,**kwargs):
                 next(x for x in widgets if isinstance(x,tk.Text)).insert('1.0','移除文件后保存')
             else:
                 next(x for x in widgets if isinstance(x,tk.Text)).insert('1.0','明确请求发送')
-            action='现在发送 ↑' if stage==2 else '保存后续任务 ↑'
+            action='现在发送　　 ↑' if stage==2 else '保存后续任务 ↑'
             target=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')==action)
             assert target.winfo_viewable()
             assert target.winfo_rooty()+target.winfo_height()<=root.winfo_rooty()+root.winfo_height()
