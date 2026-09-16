@@ -235,7 +235,14 @@ def show():
     plan_actions=tk.Frame(frame,bg='#181818');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
-    label('后续需求会在监控器恢复的原任务完成后发送。', '#999999',10)
+    def send_saved():
+        index=select.current()
+        if index<0:return
+        thread=threads[index]['id']
+        background(lambda:w.request_plan_send(thread))
+    button(plan_actions,'发送已存任务',send_saved)
+
+    label('保存需等待验收标记；发送已存任务只需空闲和额度。', '#999999',10)
     names={'waiting-quota':'等待额度恢复','no-quota-stall':'未发现需要续跑的额度中断任务',
            'resuming':'正在续跑','resumed':'本次续跑已返回','queued-awaiting-start':'已交给 Codex，等待开始',
            'waiting-start':'等待任务开始确认','dispatch-unconfirmed':'任务尚未确认开始，请查看运行记录',

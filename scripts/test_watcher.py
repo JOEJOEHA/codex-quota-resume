@@ -201,3 +201,18 @@ with tempfile.TemporaryDirectory() as d:
   assert json.loads(command[-1][command[-1].index('['):])==[str(image.resolve())]
   assert image.read_bytes()==b'copied-image'
 print('QUEUE_IMAGE_COMPAT_OK: explicit rejection falls back to original text plus durable image paths')
+# Explicit delivery retains saved content and rejects replay of a queued task.
+with tempfile.TemporaryDirectory() as directory:
+    from unittest.mock import patch
+    with patch.object(w, 'APP_DIR', Path(directory)):
+        tid='00000000-0000-0000-0000-000000000001'
+        path=w.plan_path(tid)
+        plan={'status':'saved','text':'preserve me','images':['image.png'],'files':['file.txt']}
+        w.write_plan(path,plan)
+        w.request_plan_send(tid)
+        assert json.loads(path.read_text())==dict(plan,sendRequested=True)
+        w.write_plan(path,dict(plan,status='queued'))
+        try:w.request_plan_send(tid)
+        except RuntimeError:pass
+        else:raise AssertionError('Queued follow-up must not be sent again')
+print('EXPLICIT_SEND_REQUEST_OK')
