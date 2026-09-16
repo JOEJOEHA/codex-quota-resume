@@ -176,11 +176,11 @@ def show():
     github_path=Path(__file__).with_name('github-mark.png')
     if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
     with Image.open(github_path) as icon:
-        github_icon=ImageTk.PhotoImage(icon,master=root)
+        github_icon=ImageTk.PhotoImage(icon.resize((16,16),Image.Resampling.LANCZOS),master=root)
     github_button=tk.Button(footer,name='github_link',image=github_icon,
         command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'),
         bg='#181818',activebackground='#2b2b2b',bd=0,highlightthickness=0,
-        padx=4,pady=3,cursor='hand2',takefocus=True)
+        padx=8,pady=7,cursor='hand2',takefocus=True)
     github_button.image=github_icon
     github_button.pack(side='right',padx=(0,12))
     def button(parent,text,command,blue=False):
