@@ -32,6 +32,7 @@ def button(root, title):
 
 
 def mainloop(root):
+    print('Python:',sys.version,'Tk:',root.tk.call('package','require','Tk'))
     def check():
         try:
             assert root.tray.active
@@ -77,7 +78,7 @@ def mainloop(root):
                     output.parent.mkdir(exist_ok=True)
                     screenshot=ImageGrab.grab()
                     screenshot.save(output)
-                    assert sum(1 for pixel in screenshot.convert('RGB').getdata() if pixel==(0,128,0))>1000, 'Thumbnails were not painted'
+                    assert dict((color,count) for count,color in screenshot.convert('RGB').getcolors(1920*1080*4)).get((0,128,0),0)>1000, 'Thumbnails were not painted'
                     root.tray.target.exit_(None)
                     root.after_cancel(root.tray.timer)
                     root.tray.poll();root.update()

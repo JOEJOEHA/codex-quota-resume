@@ -4,7 +4,7 @@
 
 ## 构建与安装
 
-在 macOS 上使用包含 Tk 的 Python 3.12（例如 python.org 安装包）：
+在 macOS 上使用包含 Tk 的 Python 3.13 最新维护版（例如 python.org 安装包）：
 
 ```sh
 python3 -m venv .venv
