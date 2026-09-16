@@ -22,6 +22,7 @@ jobs:
         run: |
           python scripts/quota_watcher.py --self-test
           python scripts/test_watcher.py
+          python scripts/test_delayed_followup.py
           python scripts/test_backup.py
           python scripts/test_live_status.py
           python scripts/test_popup.py
