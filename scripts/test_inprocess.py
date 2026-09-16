@@ -70,7 +70,7 @@ def loop(root,*args,**kwargs):
             assert long_dialog.title()=='任务输入框'
             long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))
             assert long_editor.winfo_viewable() and long_editor.winfo_height()>=100
-            for action in ('保存后续任务 ↑','现在发送 ↑','+ 添加','截图'):
+            for action in ('保存后续任务 ↑','现在发送　　 ↑','+ 添加','截图'):
                 control=button(long_dialog,action)
                 assert control.winfo_viewable()
                 assert control.winfo_rooty()+control.winfo_height()<=long_dialog.winfo_rooty()+long_dialog.winfo_height()
