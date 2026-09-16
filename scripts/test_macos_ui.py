@@ -64,11 +64,6 @@ def mainloop(root):
             large.insert('end', ' + 展开编辑')
             expanded.tk.call(expanded.protocol('WM_DELETE_WINDOW'))
             assert editor.get('1.0','end-1c') == '草稿保留 + 展开编辑'
-            with patch.object(plan_dialog,'ImageGrab') as grab, patch('macos.clipboard_files',return_value=[]):
-                grab.grabclipboard.return_value = Image.new('RGB',(80,60),'green')
-                editor.focus_force();root.update()
-                for _ in range(7):editor.event_generate('<Command-v>')
-                root.update()
             def finish():
                 try:
                     previews=[x for x in walk(dialog) if isinstance(x,tk.Button) and getattr(x,'content_image',None) is not None]
@@ -90,7 +85,19 @@ def mainloop(root):
                 except Exception as error:
                     errors.append(error)
                     root.destroy()
-            root.after(700,finish)  # Let Cocoa finish painting before capturing pixels.
+            def paste_image(index=0):
+                try:
+                    with patch.object(plan_dialog,'ImageGrab') as grab, patch('macos.clipboard_files',return_value=[]):
+                        grab.grabclipboard.return_value=Image.new('RGB',(80,60),'green')
+                        editor.focus_force()
+                        editor.event_generate('<Command-v>')
+                    if index<6:root.after(100,lambda:paste_image(index+1))
+                    else:root.after(700,finish)
+                except Exception as error:
+                    errors.append(error)
+                    root.destroy()
+            # Cocoa minimization/restore is asynchronous; deliver paste events in separate turns.
+            root.after(1000,paste_image)
         except Exception as error:
             errors.append(error)
             root.destroy()
