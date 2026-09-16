@@ -49,7 +49,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
-    previews=tk.Frame(preview_canvas,bg='#181818')
+    previews=tk.Frame(preview_area,bg='#181818')
     preview_canvas.create_window(0,0,anchor='nw',window=previews)
     preview_scroll=ttk.Scrollbar(preview_area,orient='horizontal',command=preview_canvas.xview)
     preview_canvas.configure(xscrollcommand=preview_scroll.set)
