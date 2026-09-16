@@ -30,3 +30,12 @@ The owner has no Mac. A contributor will continue on their own Mac through a for
 下一步在已登录 Codex 的目标 Mac 执行 `--doctor`，确认 CLI 路径、App Server 实验接口及 queue 支持；再验收真实菜单点击、截图权限、Retina/多显示器、重启后后台调度，最后完成“明确额度中断 → 额度恢复 → 原任务验收 → 后续任务发送”的真实完整周期。CI 使用模拟 Codex 响应，不能替代这个验收。
 
 详细构建和测试说明见 `docs/macos.md`。未改变当前 Windows 监控、用户任务、附件或打开的草稿。
+
+## Windows 应用内更新（2026-09-17） / Windows in-app updates
+
+- Windows 主分支 `49f9949`，发布 [v3.0.0-beta.18](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.18)。左下版本号、右下检查更新；GitHub 下载、SHA256 校验、分版本安装与新界面启动。
+- 实测发现 GitHub API 403 限流和公开 latest 地址缓存旧标签；已增加公开页面备用检查并刷新缓存。
+- 自动更新从 GitHub 实际下载 beta.18 并安装成功。桌面快捷方式、主备监控均指向 `%LOCALAPPDATA%\CodexQuotaWatcher\versions\v3.0.0-beta.18\CodexQuotaResume.exe`；原监控 enabled 状态不变。未删除任务、附件或强制结束草稿窗口。
+- 已安装 EXE 窗口渲染检查：430×535，底部版本号与更新按钮均可见。更新逻辑、校验失败阻止执行、版本排序、限流备用路径、输入窗口及监控业务回归通过；Windows CI 35128368435 成功。
+- Upgrade download/install verified against the real GitHub release with a simulated older client version. The installed EXE, shortcut and both monitor targets were checked; open drafts and monitor state are preserved.
+- macOS 分支同步 Windows 更新代码并保留平台限制；macOS 预览暂不支持自动安装。前述目标 Mac 与真实额度恢复验收仍待朋友完成。
