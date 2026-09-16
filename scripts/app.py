@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import tempfile
+import webbrowser
 from datetime import datetime, timedelta
 from xml.etree import ElementTree as ET
 from pathlib import Path
@@ -159,6 +160,16 @@ def show():
         background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
     update_button=RoundedButton(footer,text='检查更新',command=check_update,font=('Microsoft YaHei UI',9),padx=10,pady=5)
     update_button.pack(side='right')
+    github_path=Path(__file__).with_name('github-mark.png')
+    if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
+    with Image.open(github_path) as icon:
+        github_icon=ImageTk.PhotoImage(icon,master=root)
+    github_button=tk.Button(footer,name='github_link',image=github_icon,
+        command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'),
+        bg='#181818',activebackground='#2b2b2b',bd=0,highlightthickness=0,
+        padx=4,pady=3,cursor='hand2',takefocus=True)
+    github_button.image=github_icon
+    github_button.pack(side='right',padx=(0,12))
     def button(parent,text,command,blue=False):
         b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=('Microsoft YaHei UI',10),padx=10)
         b.pack(side='left',padx=(0,6));return b
