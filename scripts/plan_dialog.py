@@ -41,7 +41,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     title = label(top, '任务输入框', size=16); title.pack(side='left')
     window_controls(root,top,font,on_close=lambda:close_draft())
     bind_drag(root, top, title)
-    label(body, '保存：等待验收完成 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10).pack(anchor='w', pady=(8, 2))
+    label(body, '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10).pack(anchor='w', pady=(8, 2))
     # A thread without a name can supply its entire prompt as the preview.
     # Keep that metadata on one line so the editable area always remains visible.
     caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
