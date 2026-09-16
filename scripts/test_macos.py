@@ -37,4 +37,10 @@ with tempfile.TemporaryDirectory() as folder:
             for label,interval in zip(m.LABELS,(60,300)):
                 assert plistlib.loads((m.AGENTS/(label+'.plist')).read_bytes())['StartInterval']==interval
             assert sum(c.args[0]=='bootstrap' for c in ctl.call_args_list)==2
+            since=w.load_state()['monitoringSince']
+            ctl.reset_mock()
+            ctl.return_value=SimpleNamespace(returncode=0)
+            m.install(w)
+            assert w.load_state()['monitoringSince']==since
+            assert not any(c.args[0] in ('bootstrap','bootout','kill') for c in ctl.call_args_list)
 print('MACOS_CONTRACTS_OK: paths, plist, main/backup intervals, pause gate, non-destructive install')

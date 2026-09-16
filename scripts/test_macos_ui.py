@@ -61,17 +61,23 @@ def mainloop(root):
                 editor.focus_force();root.update()
                 for _ in range(7):editor.event_generate('<Command-v>')
                 root.update()
-            output = Path('build/macos-ui.png')
-            output.parent.mkdir(exist_ok=True)
-            ImageGrab.grab().save(output)
-            root.tray.target.exit_(None)
-            root.after_cancel(root.tray.timer)
-            root.tray.poll();root.update()
-            assert root.winfo_exists() and dialog.winfo_exists()  # Exit keeps open draft alive.
-            button(dialog,'保存后续任务 ↑').invoke()
-            plan = json.loads(app.w.plan_path(thread).read_text(encoding='utf-8'))
-            assert plan['text'] == '草稿保留 + 展开编辑' and plan['status'] == 'saved'
-            assert len(plan['images']) == 7
+            def finish():
+                try:
+                    output = Path('build/macos-ui.png')
+                    output.parent.mkdir(exist_ok=True)
+                    ImageGrab.grab().save(output)
+                    root.tray.target.exit_(None)
+                    root.after_cancel(root.tray.timer)
+                    root.tray.poll();root.update()
+                    assert root.winfo_exists() and dialog.winfo_exists()  # Exit keeps open draft alive.
+                    button(dialog,'保存后续任务 ↑').invoke()
+                    plan = json.loads(app.w.plan_path(thread).read_text(encoding='utf-8'))
+                    assert plan['text'] == '草稿保留 + 展开编辑' and plan['status'] == 'saved'
+                    assert len(plan['images']) == 7
+                except Exception as error:
+                    errors.append(error)
+                    root.destroy()
+            root.after(700,finish)  # Let Cocoa finish painting before capturing pixels.
         except Exception as error:
             errors.append(error)
             root.destroy()

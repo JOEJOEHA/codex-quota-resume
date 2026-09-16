@@ -15,7 +15,7 @@ python scripts/build_macos.py
 
 生成 `dist/CodexQuotaResume.app` 与对应架构的预览 ZIP / SHA256。GitHub Actions 分别在 Apple Silicon 和 Intel runner 构建，并提供 artifacts。只生成开发用 ad-hoc 签名；没有 Developer ID 签名、公证或正式安装包。不要关闭 Gatekeeper；如系统阻止运行，按 macOS 的“隐私与安全性”流程处理可信的本地构建。
 
-把 `.app` 放入 `/Applications` 或 `~/Applications`，双击打开，然后点击“启用 / 更新监控”。这一步检查已有 Codex 登录与额度接口，并注册当前用户的两个 LaunchAgent；无需管理员权限。移动应用后需更新监控路径。也可以从固定源码目录运行 `python scripts/app.py`。
+把 `.app` 放入 `/Applications` 或 `~/Applications`，双击打开，然后点击“启用 / 更新监控”。这一步检查已有 Codex 登录与额度接口，并注册当前用户的两个 LaunchAgent；无需管理员权限。更新使用相同安装路径；已加载的路径或环境不同时，程序会拒绝覆盖，避免中止执行中的任务。更换路径需先确认任务结束，再手动重新注册 LaunchAgent。也可以从固定源码目录运行 `python scripts/app.py`。
 
 ## 平台行为
 

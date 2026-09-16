@@ -21,6 +21,7 @@ class RoundedButton(tk.Button):
         super().__init__(parent,text=text,command=command,font=font,fg=fg,
                          bg=parent.cget('bg'),activebackground=parent.cget('bg'),
                          activeforeground=fg,relief='flat',bd=0,highlightthickness=0,
+                         highlightbackground=parent.cget('bg'),
                          padx=0,pady=0,cursor='hand2',compound='center',takefocus=True)
         self.bind('<ButtonPress-1>',lambda e:self.winfo_toplevel().focus_set())
         self.bind('<Enter>',lambda e:self.redraw(True))

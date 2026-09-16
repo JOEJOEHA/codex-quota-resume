@@ -62,9 +62,15 @@ def install(w):
         if loaded and (not path.exists() or plistlib.loads(path.read_bytes()) != value):
             raise RuntimeError('已加载的监控路径或环境不同。请使用原安装路径；更换路径需在确认任务结束后手动重新注册 LaunchAgent。当前监控未停止。')
         jobs.append((label, path, value, loaded))
-    state = w.load_state()
-    state.setdefault('monitoringSince', time.time())
-    w.save_state(state)
+    # Installing/updating must not overwrite an active watcher's send records.
+    with (w.APP_DIR / 'monitor.lock').open('a+b') as lock:
+        if lock.seek(0, 2) == 0:lock.write(b'0');lock.flush()
+        lock.seek(0)
+        try:w.lock_monitor(lock)
+        except OSError:raise RuntimeError('监控正在处理任务，请等本次执行结束后再更新。')
+        state = w.load_state()
+        state.setdefault('monitoringSince', time.time())
+        w.save_state(state)
     for label, path, value, loaded in jobs:
         launchctl('enable', domain + '/' + label)
         if not loaded:

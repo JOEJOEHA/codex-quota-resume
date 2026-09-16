@@ -230,7 +230,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             if choice:save();return
         root.destroy()
     root.protocol('WM_DELETE_WINDOW',close_draft)
-    if parent is None and sys.platform == 'darwin':root.createcommand('tk::mac::Quit',close_draft)
+    if parent is None and sys.platform == 'darwin':root.createcommand('tk::mac::Quit',lambda:root.after_idle(close_draft))
     menu=tk.Canvas(body,width=160,height=110,bg='#181818',highlightthickness=0)
     menu.create_polygon(20,1,140,1,159,1,159,20,159,90,159,109,140,109,
                         20,109,1,109,1,90,1,20,1,1,smooth=True,
