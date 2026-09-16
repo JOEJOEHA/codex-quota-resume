@@ -66,9 +66,8 @@ def mainloop(root):
             assert editor.get('1.0','end-1c') == '草稿保留 + 展开编辑'
             def finish():
                 try:
-                    previews=[x for x in walk(dialog) if isinstance(x,tk.Button) and getattr(x,'content_image',None) is not None]
-                    assert len(previews)==7 and all(x.winfo_ismapped() for x in previews)
-                    print('Preview geometry:',[(x.winfo_rootx(),x.winfo_rooty(),x.winfo_width(),x.winfo_height()) for x in previews])
+                    preview=next(x for x in walk(dialog) if isinstance(x,tk.Canvas) and x.find_withtag('thumbnail'))
+                    assert len(preview.find_withtag('thumbnail'))==7 and preview.winfo_ismapped()
                     output = Path('build/macos-ui.png')
                     output.parent.mkdir(exist_ok=True)
                     screenshot=ImageGrab.grab()

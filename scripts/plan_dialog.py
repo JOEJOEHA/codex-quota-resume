@@ -50,7 +50,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
     previews=tk.Frame(preview_area,bg='#181818')
-    preview_canvas.create_window(0,0,anchor='nw',window=previews)
+    if sys.platform != 'darwin':preview_canvas.create_window(0,0,anchor='nw',window=previews)
     preview_scroll=ttk.Scrollbar(preview_area,orient='horizontal',command=preview_canvas.xview)
     preview_canvas.configure(xscrollcommand=preview_scroll.set)
     previews.bind('<Configure>',lambda e:preview_canvas.configure(scrollregion=preview_canvas.bbox('all')))
@@ -92,6 +92,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     photos = []
     def refresh():
         for child in previews.winfo_children(): child.destroy()
+        if sys.platform == 'darwin':preview_canvas.delete('all')
         photos.clear()
         if attachments:
             preview_canvas.pack(fill='x');preview_scroll.pack(fill='x')
@@ -102,12 +103,22 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                 with Image.open(item) as im:
                     im.thumbnail((92, 68))
                     photo = im.copy()
+                if sys.platform == 'darwin':
+                    # Draw in one canvas: Aqua can fail to paint embedded button windows.
+                    photo=ImageTk.PhotoImage(photo,master=preview_canvas)
+                    tag=f'thumbnail-{index}'
+                    preview_canvas.create_image(index*110+6,6,anchor='nw',image=photo,tags=('thumbnail',tag))
+                    preview_canvas.tag_bind(tag,'<Button-1>',lambda e,p=item:remove(p))
+                else:
+                    b = RoundedButton(previews, image=photo, padx=6, pady=6,
+                                  command=lambda p=item: remove(p))
+                    b.grid(row=0,column=index,padx=(0,8),pady=(0,4))
                 photos.append(photo)
-                b = RoundedButton(previews, image=photo, padx=6, pady=6,
-                              command=lambda p=item: remove(p))
-                b.grid(row=0,column=index,padx=(0,8),pady=(0,4))
             except (OSError, ValueError):
-                label(previews, '图片无法读取', '#ff9a9a').grid(row=0,column=index)
+                if sys.platform == 'darwin':
+                    preview_canvas.create_text(index*110+6,30,anchor='w',text='图片无法读取',fill='#ff9a9a')
+                else:label(previews, '图片无法读取', '#ff9a9a').grid(row=0,column=index)
+        if sys.platform == 'darwin':preview_canvas.configure(scrollregion=preview_canvas.bbox('all'))
     def remove(item):
         attachments.remove(item); refresh()
     def add_image(im):
