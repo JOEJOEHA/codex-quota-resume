@@ -7,11 +7,12 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 import urllib.request
 import urllib.error
 import urllib.parse
 
-VERSION = '3.0.0-beta.17'
+VERSION = '3.0.0-beta.18'
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'
 
@@ -90,7 +91,7 @@ def update(directory, progress=lambda text: None, current=VERSION):
         except urllib.error.HTTPError as error:
             if error.code not in (403, 429):raise
             # Public latest-release redirect works without an API quota or token.
-            with fetch(f'https://github.com/{REPO}/releases/latest') as response:
+            with fetch(f'https://github.com/{REPO}/releases/latest?check={int(time.time())}') as response:
                 url = response.geturl()
             prefix = f'https://github.com/{REPO}/releases/tag/'
             tag = urllib.parse.unquote(url[len(prefix):]) if url.startswith(prefix) else ''
