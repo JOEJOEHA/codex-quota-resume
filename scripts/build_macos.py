@@ -19,6 +19,7 @@ def main():
                     '--osx-bundle-identifier', 'com.codexquota.desktop',
                     '--icon', str(build / 'app-icon.icns'),
                     '--add-data', str(root / 'assets/github-mark.png') + ':.',
+                    '--add-data', str(root / 'assets/app-icon.png') + ':.',
                     '--hidden-import', 'AppKit', '--hidden-import', 'Foundation',
                     '--distpath', str(root / 'dist'), '--workpath', str(build),
                     '--specpath', str(build), str(root / 'scripts/app.py')], check=True, cwd=root)

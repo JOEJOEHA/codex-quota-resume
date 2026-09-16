@@ -36,6 +36,7 @@ def mainloop(root):
     def check():
         try:
             assert root.tray.active
+            assert root.tray.item.button().image() is not None
             root.withdraw()
             root.tray.target.open_(None)
             assert not root.winfo_viewable()  # Native callback only enqueues.
