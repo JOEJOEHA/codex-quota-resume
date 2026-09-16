@@ -72,7 +72,15 @@ def mainloop(root):
                     output.parent.mkdir(exist_ok=True)
                     screenshot=ImageGrab.grab()
                     screenshot.save(output)
-                    assert dict((color,count) for count,color in screenshot.convert('RGB').getcolors(1920*1080*4)).get((0,128,0),0)>1000, 'Thumbnails were not painted'
+                    sx,sy=screenshot.width/root.winfo_screenwidth(),screenshot.height/root.winfo_screenheight()
+                    x,y=preview.winfo_rootx(),preview.winfo_rooty()
+                    region=screenshot.crop((int(x*sx),int(y*sy),int((x+preview.winfo_width())*sx),int((y+preview.winfo_height())*sy))).convert('RGB')
+                    colors=region.getcolors(region.width*region.height)
+                    assert sum(count for count,(r,g,b) in colors if r<=8 and 120<=g<=136 and b<=8)>1000, 'Thumbnails were not painted'
+                    preview.event_generate('<Motion>',x=40,y=30)
+                    preview.event_generate('<Button-1>',x=40,y=30)
+                    root.update()
+                    assert len(preview.find_withtag('thumbnail'))==6, 'Click did not remove the image'
                     root.tray.target.exit_(None)
                     root.after_cancel(root.tray.timer)
                     root.tray.poll();root.update()
@@ -80,7 +88,7 @@ def mainloop(root):
                     button(dialog,'保存后续任务 ↑').invoke()
                     plan = json.loads(app.w.plan_path(thread).read_text(encoding='utf-8'))
                     assert plan['text'] == '草稿保留 + 展开编辑' and plan['status'] == 'saved'
-                    assert len(plan['images']) == 7
+                    assert len(plan['images']) == 6
                 except Exception as error:
                     errors.append(error)
                     root.destroy()
