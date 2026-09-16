@@ -22,7 +22,7 @@ def fetch(url):
 with tempfile.TemporaryDirectory() as folder, patch.object(u,'fetch',side_effect=fetch), patch.object(u.subprocess,'run') as run, patch.object(u.subprocess,'Popen') as launch:
     run.return_value.returncode=0
     root=Path(folder);(root/'paused.flag').touch();(root/'plan.json').write_text('draft')
-    assert not u.update(root)['updated']
+    assert not u.update(root,current='3.0.0-beta.16')['updated']
     assert not run.called
     assert u.update(root,current='3.0.0-beta.15')['updated']
     assert run.call_args.args[0][-1]=='--apply-update' and launch.called
@@ -41,4 +41,12 @@ u.activate('example.exe',commands.append)
 script=base64.b64decode(commands[0][-1]).decode('utf-16le')
 assert 'Set-ScheduledTask' in script
 assert all(x not in script for x in ('Stop-ScheduledTask','Enable-ScheduledTask','Start-ScheduledTask','paused.flag'))
+with tempfile.TemporaryDirectory() as folder:
+    def limited(url):
+        if 'api.github.com' in url:raise u.urllib.error.HTTPError(url,403,'rate limit',{},None)
+        response=io.BytesIO(b'')
+        response.geturl=lambda:f'https://github.com/{u.REPO}/releases/tag/v3.0.0-beta.16'
+        return response
+    with patch.object(u,'fetch',side_effect=limited):
+        assert not u.update(folder)['updated']
 print('UPDATER_OK')
