@@ -49,3 +49,12 @@ The owner has no Mac. A contributor will continue on their own Mac through a for
 - macOS 仍为开发预览：应用内自动安装尚未移植，使用手动下载替换；目标 Mac 登录及真实额度恢复周期验收仍待完成，不宣称全功能验收。
 
 The latest Windows changes are synchronized to macos-port. macOS packages remain developer previews; in-app automatic installation and signed-in target-device acceptance remain pending. Windows auto-update and quota-popup behavior were locally tested.
+
+## 续跑后 10 秒发送 / Ten-second follow-up (beta.25)
+
+用户最新要求覆盖原先的完成标记等待规则：当存在已保存需求，续跑请求确认接受后等待 10 秒，直接请求加入原会话队列，即使原任务仍在运行也不等待验收标记。发送前仍检查实时额度。已发送、已入队及发送结果不明确的需求不自动重发。
+
+- Windows main `57840da`，已安装 beta.25，CI `35164402279` 成功。
+- macOS 同步提交 `f72015f`，两个架构构建中，CI `35164446739`。
+- 新测试覆盖：正常入队续跑、长时间 exec resume 未返回时发送、10 秒下限、无额度等待、队列去重、持久化时间；原监控与窗口回归通过。
+- Release `v3.0.0-beta.25` 草稿已创建，等待 Mac 构建附件。真实额度完整周期与 Mac 实机验收仍未宣称完成。
