@@ -33,8 +33,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size),wraplength=374,justify='left')
         bind_drag(root, item)
         return item
-    def button(parent, text, command, accent=False):
-        return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font)
+    def button(parent, text, command, accent=False, width_px=None):
+        return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font,width_px=width_px)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
     title = label(top, '任务输入框', size=16); title.pack(side='left')
     window_controls(root,top,font)
@@ -252,9 +252,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         else:root.destroy()
     button(bottom, '截图', screenshot).pack(side='left', padx=8)
     send_row=tk.Frame(body,bg='#181818')
-    send_row.pack(side='bottom',fill='x',before=bottom)
-    button(send_row, '现在发送 ↑', lambda:save(send_now=True), True).pack(side='right')
-    button(bottom, '保存后续任务 ↑', save).pack(side='right')
+    send_row.pack(side='bottom',fill='x',before=bottom,pady=(12,0))
+    action_width=tkfont.Font(font=font).measure('保存后续任务 ↑')+28
+    button(send_row, '现在发送 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(side='right')
+    button(bottom, '保存后续任务 ↑', save, width_px=action_width).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     root.bind('<Escape>',escape)
