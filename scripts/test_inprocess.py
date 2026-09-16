@@ -57,6 +57,15 @@ def loop(root,*args,**kwargs):
             picker.current(1);button(root,'打开需求输入框').invoke();root.update()
             others=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel) and w!=dialog]
             assert len(others)==1 and others[0].tk is root.tk
+            rects=[]
+            for window in (root,dialog,others[0]):
+                bounds=wintypes.RECT()
+                ctypes.windll.user32.GetWindowRect(window_handle(window),ctypes.byref(bounds))
+                rects.append((bounds.left,bounds.top,bounds.right,bounds.bottom))
+            for index,(left,top,right,bottom) in enumerate(rects):
+                for l,t,r,b in rects[:index]:
+                    assert right+6<=l or r+6<=left or bottom+6<=t or b+6<=top,rects
+            assert all(r[0]>=rects[0][2]+6 for r in rects[1:]) or all(r[2]+6<=rects[0][0] for r in rects[1:])
             long_dialog=others[0]
             assert long_dialog.title()=='任务输入框'
             long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))

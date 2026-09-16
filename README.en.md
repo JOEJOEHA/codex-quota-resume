@@ -89,3 +89,5 @@ These use temporary data and simulated responses. For macOS, also follow the nat
 The app reads local Codex logs, local App Server state and live quota using the existing Codex login. It does not read/upload login tokens, redeem resets or purchase quota. Saved content remains local until it is sent through Codex's normal service flow. Never commit local credentials, logs, task content or attachments; redact reports.
 
 Network outages, expired login, required approvals, API changes and hung processes can prevent recovery. Backup monitoring still shares the OS, Python, Codex and network. When startup cannot be confirmed, avoiding duplicate execution takes priority. No guaranteed recovery is promised.
+
+Multiple composers are tiled in opening order on the same side of the main window, with 6-pixel gaps. The group can move or wrap into rows without overlap. If the work area is full, the app asks you to save and close or minimize a composer instead of overlapping windows or moving drafts off-screen.
