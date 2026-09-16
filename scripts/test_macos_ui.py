@@ -9,6 +9,7 @@ from unittest.mock import patch
 from PIL import Image, ImageGrab
 import app
 import plan_dialog
+from window_ui import minimize
 
 assert sys.platform == 'darwin'
 thread = '00000000-0000-0000-0000-000000000001'
@@ -48,6 +49,12 @@ def mainloop(root):
             assert abs(dialog.winfo_y()-root.winfo_y()) <= 2
             editor = next(x for x in walk(dialog) if isinstance(x, tk.Text))
             editor.insert('1.0', '草稿保留')
+            with patch.object(plan_dialog.messagebox,'askyesnocancel',return_value=None):
+                dialog.tk.call(dialog.protocol('WM_DELETE_WINDOW'))
+            assert editor.get('1.0','end-1c')=='草稿保留'
+            minimize(dialog);root.update()
+            dialog.deiconify();root.update()
+            assert dialog.winfo_viewable() and dialog.overrideredirect()
             button(root, '打开需求输入框').invoke()
             assert len([x for x in root.winfo_children() if isinstance(x, tk.Toplevel)]) == 1
             button(dialog, '↗').invoke()
@@ -68,7 +75,9 @@ def mainloop(root):
                     print('Preview geometry:',[(x.winfo_rootx(),x.winfo_rooty(),x.winfo_width(),x.winfo_height()) for x in previews])
                     output = Path('build/macos-ui.png')
                     output.parent.mkdir(exist_ok=True)
-                    ImageGrab.grab().save(output)
+                    screenshot=ImageGrab.grab()
+                    screenshot.save(output)
+                    assert sum(1 for pixel in screenshot.convert('RGB').getdata() if pixel==(0,128,0))>1000, 'Thumbnails were not painted'
                     root.tray.target.exit_(None)
                     root.after_cancel(root.tray.timer)
                     root.tray.poll();root.update()

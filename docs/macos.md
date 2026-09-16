@@ -40,6 +40,8 @@ python scripts/app.py --doctor
 
 本地 Windows 可运行共享业务回归及 `test_macos.py` 的模拟平台测试。macOS CI 运行相同业务测试、真实进程锁测试、原生 Tk / 菜单栏冒烟测试、构建及签名检查。CI 无已登录的用户 Codex，不证明真实额度恢复与任务发送已验收。
 
+2026-09-16：Apple Silicon（macOS 14）与 Intel（macOS 15）CI 均已完成上述检查并生成 `.app` 预览产物。已检查原生窗口截图；另用临时 LaunchAgent 验证加载和后台启动，测试结束移除自己的测试任务。没有改动用户机器的 Windows 监控或保存数据。
+
 交付前还需在目标 Mac 逐项验收：
 
 - 登录状态、实时额度、exec resume、桌面写入者冲突时 queue 的真实支持。
