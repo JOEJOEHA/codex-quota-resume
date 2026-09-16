@@ -1,6 +1,6 @@
 """NSStatusItem callbacks enqueue actions; only Tk's timer operates on widgets."""
 from queue import SimpleQueue
-from AppKit import (NSObject, NSApplication, NSStatusBar, NSVariableStatusItem,
+from AppKit import (NSObject, NSApplication, NSStatusBar, NSVariableStatusItemLength,
                     NSMenu, NSMenuItem, NSEventMaskLeftMouseUp, NSEventMaskRightMouseUp,
                     NSEventTypeRightMouseUp)
 
@@ -24,7 +24,7 @@ class TrayIcon:
         self.target = StatusTarget.alloc().init()
         self.target.events = self.events
         self.bar = NSStatusBar.systemStatusBar()
-        self.item = self.bar.statusItemWithLength_(NSVariableStatusItem)
+        self.item = self.bar.statusItemWithLength_(NSVariableStatusItemLength)
         button = self.item.button()
         button.setTitle_('↻')
         button.setToolTip_('Codex 自动续跑 — 点击打开，右键菜单')

@@ -66,12 +66,12 @@ def install(w):
     state.setdefault('monitoringSince', time.time())
     w.save_state(state)
     for label, path, value, loaded in jobs:
+        launchctl('enable', domain + '/' + label)
         if not loaded:
             temporary = path.with_suffix('.tmp')
             temporary.write_bytes(plistlib.dumps(value))
             temporary.chmod(0o600)
             temporary.replace(path)
-            launchctl('enable', domain + '/' + label)
             launchctl('bootstrap', domain, str(path))
     (w.APP_DIR / 'paused.flag').unlink(missing_ok=True)
     return '已启用主备监控（每分钟 / 每五分钟），退出界面后继续运行。'
