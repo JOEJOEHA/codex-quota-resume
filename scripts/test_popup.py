@@ -1,9 +1,19 @@
+import tempfile,time
+from pathlib import Path
 from unittest.mock import patch
 import quota_watcher as w
-with patch.object(w.subprocess, 'Popen') as start, patch.object(w, 'save_state') as save:
-    state = {}
-    w.offer_plan({'threadId': '00000000-0000-0000-0000-000000000001', 'key': 'new'}, state)
+with tempfile.TemporaryDirectory() as directory,patch.object(w,'APP_DIR',Path(directory)),patch.object(w.subprocess,'Popen') as start:
+    pending={'threadId':'00000000-0000-0000-0000-000000000001','key':'one','quotaError':True}
+    w.offer_plan(dict(pending,quotaError=False),{})
     start.assert_not_called()
-    save.assert_not_called()
-    assert state == {}
-print('NO_AUTO_POPUP_OK')
+    heartbeat=Path(directory)/'ui-heartbeat';heartbeat.touch()
+    w.offer_plan(pending,{})
+    start.assert_not_called()
+    assert w.claim_popup(pending)
+    assert w.claim_popup(pending) is None
+    heartbeat.unlink()
+    w.offer_plan(dict(pending,key='two'),{})
+    w.offer_plan(dict(pending,key='two'),{})
+    assert start.call_count==1
+    assert '--plan' in start.call_args.args[0]
+print('QUOTA_POPUP_OK: explicit error, GUI reuse, one per interruption, background fallback')

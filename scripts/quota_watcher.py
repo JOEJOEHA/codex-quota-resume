@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -127,9 +128,31 @@ def dispatch(thread: str, text: str, images=(), cwd=None):
     return result
 
 
+def claim_popup(pending):
+    if not pending.get('quotaError') or not UUID_RE.fullmatch(pending.get('threadId','')):
+        return None
+    folder=APP_DIR/'popup-offers';folder.mkdir(parents=True,exist_ok=True)
+    path=folder/(hashlib.sha256(pending['key'].encode()).hexdigest()+'.json')
+    try:
+        with path.open('x',encoding='utf-8') as stream:json.dump(pending,stream)
+    except FileExistsError:return None
+    return path
+
+
 def offer_plan(pending: dict, state: dict) -> None:
-    """Monitoring never opens the follow-up composer; open it manually instead."""
-    return
+    """Prefer the running GUI; otherwise open one composer per quota interruption."""
+    try:
+        if time.time()-(APP_DIR/'ui-heartbeat').stat().st_mtime<8:return
+    except FileNotFoundError:pass
+    claim=claim_popup(pending)
+    if claim is None:return
+    try:
+        subprocess.Popen(self_command('--plan',pending['threadId'],'--plan-key',pending['key']),
+                         env=dict(os.environ,PYINSTALLER_RESET_ENVIRONMENT='1'),
+                         creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    except OSError:
+        claim.unlink(missing_ok=True)
+        raise
 
 
 def plan_message(plan):

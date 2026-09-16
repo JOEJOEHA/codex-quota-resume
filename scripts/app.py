@@ -197,7 +197,14 @@ def show():
         return data
     def load_threads():
         background(get_threads)
-    def compose():
+    def compose(thread=None):
+        if thread:
+            index=next((i for i,item in enumerate(threads) if item['id']==thread),None)
+            if index is None:
+                threads.append({'id':thread,'name':'额度中断任务'})
+                select.set_values([(x.get('name') or x.get('preview') or x['id']).replace('\n',' ')[:65] for x in threads])
+                index=len(threads)-1
+            select.current(index)
         index=select.current()
         if index<0:
             messagebox.showinfo('选择任务','先刷新并选择一个任务。',parent=root);return
@@ -246,6 +253,8 @@ def show():
            'followup-missing-image':'图片丢失，请重新添加',
            'followup-missing-file':'附件丢失，请重新添加'}
     def tick():
+        w.APP_DIR.mkdir(parents=True,exist_ok=True)
+        (w.APP_DIR/'ui-heartbeat').touch()
         refresh_pending()
         state=w.load_state();code=state.get('status','not-installed')
         stamp=state.get('lastCheckedAt')
@@ -253,7 +262,17 @@ def show():
         detail.configure(text=('最近检查 '+time.strftime('%m-%d %H:%M:%S',time.localtime(stamp)) if stamp else '尚无检查记录')+'  ·  '+{'primary':'主监控','backup':'备用监控'}.get(state.get('lastMonitor'),''))
         try:
             kind,value=results.get_nowait()
-            if kind=='monitor':
+            if kind=='quota-popup':
+                claim=w.claim_popup(value)
+                if claim:
+                    try:
+                        root.deiconify()
+                        compose(value['threadId'])
+                        if value['threadId'] not in open_plans:claim.unlink(missing_ok=True)
+                    except Exception:
+                        claim.unlink(missing_ok=True)
+                        raise
+            elif kind=='monitor':
                 text,color,enabled=value
                 monitor_dot.itemconfigure(dot,image=dot_images[enabled])
                 enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',
@@ -283,8 +302,15 @@ def show():
                 threading.Thread(target=lambda:results.put(('monitor',monitor_indicator())),daemon=True).start()
         except queue.Empty:pass
         root.after(1000,tick)
+    popup_since=time.time()
     def refresh_monitor():
         while True:
+            try:
+                state=w.load_state()
+                if not (w.APP_DIR/'paused.flag').exists():
+                    candidate=w.latest_candidate(time.time(),state.get('sent',{}),state.get('monitoringSince',popup_since))
+                    if candidate:results.put(('quota-popup',candidate))
+            except (OSError,ValueError):pass
             results.put(('monitor',monitor_indicator()))
             time.sleep(5)
     tick();load_threads()
