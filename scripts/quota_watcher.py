@@ -50,6 +50,31 @@ def write_plan(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
+def request_plan_send(thread):
+    """Explicit user action; retain the saved payload and monitor deduplication."""
+    APP_DIR.mkdir(parents=True,exist_ok=True)
+    with (APP_DIR/'monitor.lock').open('a+b') as lock:
+        if lock.seek(0,2)==0:lock.write(b'0');lock.flush()
+        lock.seek(0)
+        try:
+            if os.name=='nt':
+                import msvcrt
+                msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+            else:
+                import fcntl
+                fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except OSError:
+            raise RuntimeError('监控正在处理，请稍后再点发送。')
+        path=plan_path(thread)
+        if not path.exists():raise RuntimeError('此任务没有已保存的需求，请先打开输入框填写。')
+        plan=json.loads(path.read_text(encoding='utf-8'))
+        if plan.get('status')!='saved':
+            raise RuntimeError('任务已交付或发送状态待确认，请勿重复发送。')
+        plan['sendRequested']=True
+        write_plan(path,plan)
+    return '已请求发送：会话空闲且额度可用时发送。'
+
+
 def plan_dialog(thread: str, key=None, parent=None, task_name=None, on_saved=None):
     from plan_dialog import show
     if task_name is None:
