@@ -103,28 +103,8 @@ def dispatch(thread: str, text: str, images=(), cwd=None):
 
 
 def offer_plan(pending: dict, state: dict) -> None:
-    if pending['key'] in state.get('offeredPlans', []):
-        return
-    startup = subprocess.STARTUPINFO()
-    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup.wShowWindow = 1
-    process = subprocess.Popen(self_command('--plan', pending['threadId'], '--plan-key', pending['key']),
-                               startupinfo=startup,
-                               env={**os.environ, 'PYINSTALLER_RESET_ENVIRONMENT': '1'})
-    ready_path = APP_DIR / 'followups' / (pending['threadId'] + '.ready.json')
-    for _ in range(150):
-        try:
-            shown = json.loads(ready_path.read_text(encoding='utf-8'))
-            if shown.get('key') == pending['key']:
-                state.setdefault('offeredPlans', []).append(pending['key'])
-                save_state(state)
-                return
-        except (OSError, ValueError):
-            pass
-        if process.poll() is not None:
-            break
-        time.sleep(0.1)
-    log('popup-unconfirmed: no visible-window acknowledgement')
+    """Monitoring never opens the follow-up composer; open it manually instead."""
+    return
 
 
 def plan_message(plan):
