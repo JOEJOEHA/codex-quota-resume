@@ -15,7 +15,7 @@ from window_ui import rounded_window, bind_drag, window_controls, RoundedButton,
 def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, on_saved=None):
     if parent is None:ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
-    saved = old.get('status') == 'saved'
+    saved = old.get('status') in ('saved', 'send-failed')
     attachments = list(old.get('images', [])) if saved else []
     files = list(old.get('files', [])) if saved else []
     root = tk.Toplevel(parent) if parent is not None else tk.Tk()
@@ -38,7 +38,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     title = label(top, '续跑后的任务', size=16); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
-    label(body, '原任务完成后发送 · 仅保存到本机', '#aaaaaa').pack(anchor='w', pady=(8, 2))
+    label(body, '保存：等待验收完成 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10).pack(anchor='w', pady=(8, 2))
     label(body, task_name or old.get('taskName') or '当前任务', '#aaaaaa', 11).pack(anchor='w')
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
     hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 11)
@@ -185,7 +185,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     expand_host=tk.Frame(input_area,bg='#2b2b2b')
     expand_button=RoundedButton(expand_host,text='↗',command=expand_editor,font=font,padx=5,pady=1)
     expand_button.pack()
-    def save(event=None):
+    def save(event=None, send_now=False):
         collapse_editor()
         text = editor.get('1.0', 'end').strip()
         if not text and not attachments and not files:
@@ -194,7 +194,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             messagebox.showerror('附件不存在', '请移除无法读取的附件后重新添加。', parent=root); return
         try:
             write_plan(path, {'threadId': thread, 'taskName': task_name or old.get('taskName') or '当前任务', 'text': text, 'images': attachments, 'files': files,
-                              'status': 'saved', 'savedAt': time.time()})
+                              'status': 'saved', 'savedAt': time.time(), 'sendRequested': send_now})
         except OSError as error:
             messagebox.showerror('保存失败', str(error), parent=root); return
         if on_saved:on_saved(thread)
@@ -238,7 +238,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
         else:root.destroy()
     button(bottom, '截图', screenshot).pack(side='left', padx=8)
-    button(bottom, '保存后续任务 ↑', save, True).pack(side='right')
+    send_row=tk.Frame(body,bg='#181818')
+    send_row.pack(side='bottom',fill='x',before=bottom)
+    button(send_row, '现在发送 ↑', lambda:save(send_now=True), True).pack(side='right')
+    button(bottom, '保存后续任务 ↑', save).pack(side='right')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     root.bind('<Escape>',escape)

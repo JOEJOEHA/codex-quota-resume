@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory() as d:
    complete('需要用户登录')
    assert w.deliver_plan(active,False)=='followup-waiting-completion'; send.assert_not_called()
    complete(w.COMPLETE_MARKER,{'code':'failure'})
-   assert w.deliver_plan(active,False) is None; send.assert_not_called()
+   assert w.deliver_plan(active,False)=='followup-waiting-idle'; send.assert_not_called()
    complete('所有目标验收完成\n'+w.COMPLETE_MARKER)
    assert w.deliver_plan(active,True)=='followup-ready'; send.assert_not_called()
    assert w.deliver_plan(active,False)=='followup-sent'
@@ -110,6 +110,43 @@ print('DELIVERY_TEST_OK: failure retry, executable recovery, interrupted process
 
 print('DIRECT_RESUME_OK: all dispatch calls use the native exec resume entrypoint')
 
+# A saved plan must remain discoverable after activeDispatch has been cleared.
+with tempfile.TemporaryDirectory() as d:
+ root=Path(d); thread='00000000-0000-0000-0000-000000000001'
+ with patch.multiple(w,APP_DIR=root,STATE_PATH=root/'state.json',SESSIONS_DIR=root,LOG_PATH=root/'log',SESSION_CACHE={}):
+  p=root/('rollout-'+thread+'.jsonl'); pp=w.plan_path(thread)
+  def terminal(text,kind='task_complete'):
+   p.write_text(json.dumps({'type':'session_meta','payload':{'cwd':str(root)}})+'\n'+json.dumps(
+    {'type':'event_msg','payload':{'type':kind,'turn_id':'done','last_agent_message':text}})+'\n',encoding='utf-8')
+  w.save_state({'sent':{thread+'|quota-turn':1},'activeDispatch':None})
+  w.write_plan(pp,{'text':'saved after completion','status':'saved','images':[]})
+  with patch.object(w,'dispatch',return_value=SimpleNamespace(returncode=0)) as send:
+   terminal('ordinary completion')
+   assert w.run()=='followup-waiting-completion';send.assert_not_called()
+   terminal(w.COMPLETE_MARKER)
+   with patch.object(w.codex_status,'available',return_value=False):
+    assert w.run()=='followup-waiting-quota';send.assert_not_called()
+   assert w.run()=='followup-sent';assert send.call_count==1
+   assert send.call_args.args[3]==str(root)
+   assert w.run()=='no-quota-stall';assert send.call_count==1
+   # Explicit send requests do not need a quota-resume history or completion marker.
+   w.save_state({'sent':{}})
+   w.write_plan(pp,{'text':'new instruction','status':'saved'})
+   assert w.run()=='followup-waiting-resume';assert send.call_count==1
+   w.write_plan(pp,{'text':'new instruction','status':'saved','sendRequested':True})
+   terminal('',kind='task_started')
+   assert w.run()=='followup-waiting-idle';assert send.call_count==1
+   terminal('ordinary completion')
+   send.return_value=SimpleNamespace(returncode=0,queued=True)
+   assert w.run()=='followup-queued';assert send.call_count==2
+   assert json.loads(pp.read_text())['status']=='queued'
+   w.SESSION_CACHE.clear()
+   assert w.run()=='followup-queued';assert send.call_count==2
+   with p.open('a') as stream:
+    stream.write(json.dumps({'type':'event_msg','payload':{'type':'task_started','turn_id':'followup'}})+'\n')
+   assert w.run()=='followup-sent';assert send.call_count==2
+print('SAVED_PLAN_SCAN_OK: cleared active state, marker/quota/idle gates, explicit request, queue observation, restart dedupe')
+
 # Real failure shape: the final usage snapshot is 99%, followed by an explicit quota error.
 with tempfile.TemporaryDirectory() as d:
  root=Path(d); now=2000000000; reset=now-301
@@ -148,3 +185,18 @@ with patch.object(w.subprocess, 'run', return_value=SimpleNamespace(returncode=1
 with patch.object(w,'exhausted_candidate',side_effect=AssertionError('must not resend queued work')):
  w.recover_unstarted({'activeDispatch':{'deliveryMode':'queued'}},2000000000)
 print('WRITER_CONFLICT_OK: route to desktop queue only for writer conflict; no queued replay')
+
+with tempfile.TemporaryDirectory() as d:
+ image=Path(d)/'saved image.png';image.write_bytes(b'copied-image')
+ with patch.object(w.subprocess,'run',side_effect=[
+  SimpleNamespace(returncode=1,stderr='already has an active writer'),
+  SimpleNamespace(returncode=1,stderr='Error: `codex queue` does not support image attachments'),
+  SimpleNamespace(returncode=0,stderr='',stdout='Queued message')]) as send:
+  result=w.dispatch('00000000-0000-0000-0000-000000000001','original request',[str(image)])
+  assert result.queued and send.call_count==3
+  command=send.call_args.args[0]
+  assert command[1]=='queue' and '--image' not in command
+  assert command[-1].startswith('original request\n')
+  assert json.loads(command[-1][command[-1].index('['):])==[str(image.resolve())]
+  assert image.read_bytes()==b'copied-image'
+print('QUEUE_IMAGE_COMPAT_OK: explicit rejection falls back to original text plus durable image paths')

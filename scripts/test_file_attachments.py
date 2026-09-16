@@ -25,13 +25,19 @@ def mainloop(root,*args,**kwargs):
                 with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source)]):choose.invoke()
                 root.update();assert not choose.winfo_viewable()
                 assert listing.get(0)==source.name
-            else:
+            elif stage==1:
                 assert listing.get(0)==source.name
                 listing.selection_set(0);listing.focus_force();root.update()
                 listing.event_generate('<Delete>');root.update()
                 assert listing.size()==0
                 next(x for x in widgets if isinstance(x,tk.Text)).insert('1.0','移除文件后保存')
-            next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='保存后续任务 ↑').invoke()
+            else:
+                next(x for x in widgets if isinstance(x,tk.Text)).insert('1.0','明确请求发送')
+            action='现在发送 ↑' if stage==2 else '保存后续任务 ↑'
+            target=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')==action)
+            assert target.winfo_viewable()
+            assert target.winfo_rooty()+target.winfo_height()<=root.winfo_rooty()+root.winfo_height()
+            target.invoke()
         except Exception as error:
             errors.append(error);root.destroy()
     root.after(200,check)
@@ -44,6 +50,7 @@ with tempfile.TemporaryDirectory() as directory:
         assert not errors,errors
         import json
         data=json.loads(plan.read_text(encoding='utf-8'))
+        assert data['sendRequested'] is False
         copy=Path(data['files'][0]);assert copy!=source and copy.read_bytes()==source.read_bytes()
         source.unlink()
         assert copy.is_file()
@@ -54,4 +61,8 @@ with tempfile.TemporaryDirectory() as directory:
         assert not errors,errors
         assert json.loads(plan.read_text(encoding='utf-8'))['files']==[]
         assert copy.is_file()  # Removing from the list does not destroy saved source data.
+        stage=2
+        plan_dialog.show('test-thread',plan,w.write_plan)
+        assert not errors,errors
+        assert json.loads(plan.read_text(encoding='utf-8'))['sendRequested'] is True
 print('FILE_ATTACHMENTS_OK: copy, file-only save, reload, remove, original deletion, dispatch paths')
