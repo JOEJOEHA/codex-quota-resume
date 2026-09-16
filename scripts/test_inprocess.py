@@ -36,6 +36,7 @@ def loop(root,*args,**kwargs):
             assert update_button.winfo_rooty()+update_button.winfo_height()<=root.winfo_rooty()+root.winfo_height()
             started=time.perf_counter()
             assert root.tray.hwnd.value==window_handle(root).value
+            assert len([w for w in root.winfo_children() if isinstance(w,tk.Toplevel)])==1, 'Quota event should open the composer automatically'
             button(root,'打开需求输入框').invoke();root.update()
             dialogs=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel)]
             assert len(dialogs)==1
@@ -143,6 +144,6 @@ def loop(root,*args,**kwargs):
     return original(root,*args,**kwargs)
 with tempfile.TemporaryDirectory() as directory:
     folder=Path(directory);source=folder/'sample.txt';source.write_text('local file',encoding='utf-8')
-    with patch.object(app.w,'APP_DIR',folder),patch.object(app.w,'load_state',return_value={}),patch.object(app.w,'find_codex',return_value='codex'),patch.object(app.w.codex_status,'connection',connection),patch.object(app,'monitor_indicator',return_value=('', '', True)),patch.object(app.subprocess,'Popen') as launch,patch.object(tk.Tk,'mainloop',loop):
+    with patch.object(app.w,'latest_candidate',return_value={'threadId':thread,'key':'test-quota','quotaError':True}),patch.object(app.w,'APP_DIR',folder),patch.object(app.w,'load_state',return_value={}),patch.object(app.w,'find_codex',return_value='codex'),patch.object(app.w.codex_status,'connection',connection),patch.object(app,'monitor_indicator',return_value=('', '', True)),patch.object(app.subprocess,'Popen') as launch,patch.object(tk.Tk,'mainloop',loop):
         app.show()
 assert not errors,errors

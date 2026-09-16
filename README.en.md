@@ -95,3 +95,7 @@ Multiple composers are tiled in opening order on the same side of the main windo
 ### In-app updates (Windows)
 
 The bottom-left corner shows the version. Click the bottom-right update button to download a newer GitHub release, verify SHA256 and install it automatically. The new app opens after installation; existing draft windows remain available for saving. Saved tasks, attachments and monitor enabled/paused state are preserved. macOS developer previews still require manual download.
+
+### Automatic composer on quota interruption
+
+The running GUI checks roughly every five seconds for an explicit quota interruption and opens the matching composer, reusing an existing draft. Each interruption prompts once. With the GUI closed, the scheduled monitor opens it on its next check. Zero remaining quota alone, network errors and normal completion do not trigger a popup.
