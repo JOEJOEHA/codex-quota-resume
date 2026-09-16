@@ -157,22 +157,34 @@ def window_handle(root):
 
 
 def adjacent_positions(main,child_size,work,gap=6):
+    main,children=group_positions(main,child_size,work,1,gap)
+    return main,children[0]
+
+
+def group_positions(main,child_size,work,count,gap=6):
+    """Tile composers on one side; reject layouts that cannot fit the work area."""
     x,y,width,height=main
     cw,ch=child_size
     left,top,right,bottom=work
-    y=max(top,min(y,bottom-max(height,ch)))
-    if x+width+gap+cw<=right:
-        cx=x+width+gap
-    elif x-gap-cw>=left:
-        cx=x-gap-cw
-    else:
-        x=max(left,min(x,right-width-gap-cw))
-        cx=x+width+gap
-    return (x,y),(cx,y)
+    columns=min(count,(right-left-width)//(cw+gap))
+    rows=(bottom-top+gap)//(ch+gap)
+    if columns<1 or rows<1 or count>columns*rows or height>bottom-top:
+        raise ValueError('当前屏幕放不下更多输入窗。请先保存并关闭一个输入窗，或最小化暂时不用的输入窗。')
+    span=columns*(cw+gap)
+    side=1 if x+width+span<=right else -1 if x-span>=left else (1 if right-x-width>=x-left else -1)
+    x=max(left if side==1 else left+span,min(x,right-width-span if side==1 else right-width))
+    used_rows=(count+columns-1)//columns
+    y=max(top,min(y,bottom-max(height,used_rows*(ch+gap)-gap)))
+    children=[]
+    for index in range(count):
+        row,column=divmod(index,columns)
+        cx=x+width+gap+column*(cw+gap) if side==1 else x-(column+1)*(cw+gap)
+        children.append((cx,y+row*(ch+gap)))
+    return (x,y),children
 
 
 def place_beside(dialog,parent):
-    """Dock on the current monitor, including monitors with negative coordinates."""
+    """Arrange all visible composers; dialog=None only checks room for a new one."""
     class MonitorInfo(ctypes.Structure):
         _fields_=[('cbSize',wintypes.DWORD),('rcMonitor',wintypes.RECT),
                   ('rcWork',wintypes.RECT),('dwFlags',wintypes.DWORD)]
@@ -186,10 +198,16 @@ def place_beside(dialog,parent):
     if not user32.GetMonitorInfoW(monitor,ctypes.byref(info)):raise ctypes.WinError()
     work=info.rcWork
     original=(rect.left,rect.top)
-    main,child=adjacent_positions((*original,rect.right-rect.left,rect.bottom-rect.top),
-                                  dialog.window_size,(work.left,work.top,work.right,work.bottom))
+    dialogs=[item for item in parent.winfo_children() if getattr(item,'is_task_composer',False)
+             and (item is dialog or (item.state()!='withdrawn' and not user32.IsIconic(window_handle(item))))]
+    if dialog not in dialogs:dialogs.append(dialog)
+    size=dialog.window_size if dialog is not None else (430,535)
+    main,children=group_positions((*original,rect.right-rect.left,rect.bottom-rect.top),
+                                  size,(work.left,work.top,work.right,work.bottom),len(dialogs))
+    if dialog is None:return
     if main!=original:user32.SetWindowPos(parent_handle,None,*main,0,0,0x15)
-    user32.SetWindowPos(window_handle(dialog),None,*child,*dialog.window_size,0x14)
+    for item,position in zip(dialogs,children):
+        user32.SetWindowPos(window_handle(item),None,*position,*item.window_size,0x14)
 
 
 def minimize(root):

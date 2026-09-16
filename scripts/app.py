@@ -182,6 +182,9 @@ def show():
         if index<0:
             messagebox.showinfo('选择任务','先刷新并选择一个任务。',parent=root);return
         thread=threads[index]['id']
+        try:place_beside(open_plans.get(thread),root)
+        except ValueError as error:
+            messagebox.showinfo('输入窗排放',str(error),parent=root);return
         if thread in open_plans:
             dialog=open_plans[thread]
             place_beside(dialog,root)

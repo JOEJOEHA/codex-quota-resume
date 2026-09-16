@@ -19,6 +19,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     attachments = list(old.get('images', [])) if saved else []
     files = list(old.get('files', [])) if saved else []
     root = tk.Toplevel(parent) if parent is not None else tk.Tk()
+    root.is_task_composer = True
     if parent is not None:root.withdraw()
     timers=[]
     def cancel_timers(event):
