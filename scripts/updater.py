@@ -8,8 +8,10 @@ import re
 import subprocess
 import tempfile
 import urllib.request
+import urllib.error
+import urllib.parse
 
-VERSION = '3.0.0-beta.16'
+VERSION = '3.0.0-beta.17'
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'
 
@@ -82,8 +84,20 @@ def update(directory, progress=lambda text: None, current=VERSION):
         except OSError:
             raise RuntimeError('另一个窗口正在更新，请稍后重试。')
         progress('正在检查 GitHub 新版本…')
-        with fetch(f'https://api.github.com/repos/{REPO}/releases?per_page=100') as response:
-            releases = json.load(response)
+        try:
+            with fetch(f'https://api.github.com/repos/{REPO}/releases?per_page=100') as response:
+                releases = json.load(response)
+        except urllib.error.HTTPError as error:
+            if error.code not in (403, 429):raise
+            # Public latest-release redirect works without an API quota or token.
+            with fetch(f'https://github.com/{REPO}/releases/latest') as response:
+                url = response.geturl()
+            prefix = f'https://github.com/{REPO}/releases/tag/'
+            tag = urllib.parse.unquote(url[len(prefix):]) if url.startswith(prefix) else ''
+            if not version(tag):raise RuntimeError('无法确认 GitHub 最新版本，请稍后重试。')
+            releases = [{'draft': False, 'tag_name': tag, 'assets': [
+                {'name': name, 'browser_download_url': f'https://github.com/{REPO}/releases/download/{tag}/{name}'}
+                for name in (ASSET, 'SHA256SUMS.txt')]}]
         candidates = [r for r in releases if not r['draft'] and version(r['tag_name'])
                       and version(r['tag_name']) > version(current)
                       and {ASSET, 'SHA256SUMS.txt'} <= {a['name'] for a in r['assets']}]
