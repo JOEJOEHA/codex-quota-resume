@@ -42,9 +42,6 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     bind_drag(root, top, title)
     header_content=tk.Frame(body,bg='#181818');header_content.pack(fill='x',pady=(10,4))
     actions=tk.Frame(header_content,bg='#181818');actions.pack(side='right',anchor='n',padx=(10,0))
-    description=label(header_content, '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10)
-    description.configure(wraplength=200)
-    description.pack(side='left',fill='x',expand=True,anchor='n')
     # A thread without a name can supply its entire prompt as the preview.
     # Keep that metadata on one line so the editable area always remains visible.
     caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
@@ -60,6 +57,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     task_label.bind('<Configure>', fit_caption)
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
     if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
+    hint_text = '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送\n\n' + hint_text
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
