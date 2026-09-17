@@ -76,7 +76,7 @@ def loop(root,*args,**kwargs):
             assert long_dialog.title()=='任务输入框'
             long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))
             assert long_editor.winfo_viewable() and long_editor.winfo_height()>=100
-            for action in ('保存后续任务 ↑','现在发送　　 ↑','+ 添加','截图'):
+            for action in ('保存后续任务 ↑','现在发送　　 ↑','+'):
                 control=button(long_dialog,action)
                 assert control.winfo_viewable()
                 assert control.winfo_rooty()+control.winfo_height()<=long_dialog.winfo_rooty()+long_dialog.winfo_height()
@@ -101,7 +101,7 @@ def loop(root,*args,**kwargs):
             editor.focus_force();root.update()
             with patch.object(plan_dialog.ImageGrab,'grabclipboard',return_value=Image.new('RGB',(80,60),'green')):
                 for _ in range(8):editor.event_generate('<Control-v>');root.update()
-            button(dialog,'+ 添加').invoke();root.update()
+            button(dialog,'+').invoke();root.update()
             with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source)]):
                 button(dialog,'添加文件').invoke()
             minimize(dialog);root.update()

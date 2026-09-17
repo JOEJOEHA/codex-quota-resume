@@ -12,7 +12,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-VERSION = '3.0.0-beta.27'
+VERSION = '3.0.0-beta.28'
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'
 

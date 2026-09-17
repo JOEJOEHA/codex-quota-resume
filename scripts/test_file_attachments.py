@@ -18,7 +18,7 @@ def mainloop(root,*args,**kwargs):
             widgets=list(walk(root))
             listing=next(x for x in widgets if isinstance(x,tk.Listbox))
             if stage==0:
-                add=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='+ 添加')
+                add=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='+')
                 add.invoke();root.update()
                 choose=next(x for x in widgets if isinstance(x,tk.Button) and x.cget('text')=='添加文件')
                 assert choose.winfo_viewable()
