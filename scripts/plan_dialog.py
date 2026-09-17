@@ -38,23 +38,11 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     title = label(top, '任务输入框', size=16); title.pack(side='left')
     window_controls(root,top,font)
     bind_drag(root, top, title)
-    header_content=tk.Frame(body,bg='#181818');header_content.pack(fill='x',pady=(10,4))
-    actions=tk.Frame(header_content,bg='#181818');actions.pack(side='right',anchor='n',padx=(10,0))
-    # A thread without a name can supply its entire prompt as the preview.
-    # Keep that metadata on one line so the editable area always remains visible.
     caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
-    task_label = label(body, '', '#aaaaaa', 11)
-    task_label.configure(height=1, wraplength=0, anchor='w')
-    task_label.pack(fill='x')
-    caption_font = tkfont.Font(font=task_label.cget('font'))
-    def fit_caption(event):
-        short = caption[:60]
-        while short and caption_font.measure(short + ('…' if short != caption else '')) > event.width:
-            short = short[:-1]
-        task_label.configure(text=short + ('…' if short != caption else ''))
-    task_label.bind('<Configure>', fit_caption)
+    caption = caption[:60] + ('…' if len(caption)>60 else '')
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
     hint_text = '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送\n\n' + hint_text
+    hint_text = caption + '\n\n' + hint_text
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
@@ -110,8 +98,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         input_area.create_polygon(r,0,w-r,0,w,0,w,r,w,h-r,w,h,w-r,h,
                                   r,h,0,h,0,h-r,0,r,0,0,smooth=True,
                                   fill='#2b2b2b',outline='',tags='surface')
-        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-58))
-        expand_host.place(x=max(0,w-38),y=max(0,h-36))
+        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-76))
+        actions.place(x=max(0,w-12),y=max(0,h-10),anchor='se')
+        expand_host.place(x=max(0,w-24-actions.winfo_reqwidth()),y=max(0,h-14),anchor='se')
         add_button.place(x=12,y=max(0,h-38))
     input_area.bind('<Configure>',resize_editor)
     if saved:
@@ -262,9 +251,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     def escape(event):
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
         else:root.destroy()
-    action_width=tkfont.Font(font=font).measure('保存后续任务 ↑')+28
-    button(actions, '保存后续任务 ↑', save, width_px=action_width).pack()
-    button(actions, '现在发送　　 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(pady=(12,0))
+    action_width=(tkfont.Font(font=font).measure('保存后续任务 ↑')+28)//2
+    actions=tk.Frame(input_area,bg='#2b2b2b')
+    button(actions, '保存', save, width_px=action_width).pack(side='left',padx=(0,10))
+    button(actions, '发送', lambda:save(send_now=True), True, width_px=action_width).pack(side='left')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     root.bind('<Escape>',escape)
