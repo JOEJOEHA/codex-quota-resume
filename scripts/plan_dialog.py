@@ -105,7 +105,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-76))
         actions.place(x=max(0,w-12),y=max(0,h-10),anchor='se')
         expand_host.place(x=max(0,w-24-actions.winfo_reqwidth()),y=max(0,h-14),anchor='se')
-        add_host.place(x=12,y=max(0,h-38))
+        add_host.place(x=12,y=max(0,h-46))
     input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
