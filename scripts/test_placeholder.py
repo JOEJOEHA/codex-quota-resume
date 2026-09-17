@@ -18,6 +18,8 @@ with tempfile.TemporaryDirectory() as folder:
  dialog.focus_force();root.update()
  assert hint.winfo_ismapped()
  assert editor.get('1.0','end-1c')==''
+ dialog.event_generate('<Button-1>',x=10,y=10);root.update()
+ assert hint.winfo_ismapped()
  height=editor.master.winfo_height()
  assert height>=280,height
  hint.event_generate('<Button-1>',x=5,y=5);root.update()
