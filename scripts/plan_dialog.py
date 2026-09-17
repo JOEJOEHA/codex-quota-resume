@@ -273,9 +273,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                    y=add_button.winfo_rooty()-body.winfo_rooty()-118)
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
-    add_host=tk.Frame(input_area,bg='#2b2b2b',width=38,height=32)
+    add_host=tk.Frame(input_area,bg='#181818',width=expand_button.winfo_reqwidth(),height=expand_button.winfo_reqheight())
     add_host.pack_propagate(False)
-    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=10,pady=3)
+    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=5,pady=1)
     add_button.pack(fill='both',expand=True)
     def dismiss_menu(event):
         widget=event.widget
