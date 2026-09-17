@@ -214,10 +214,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             messagebox.showerror('保存失败', str(error), parent=root); return
         if on_saved:on_saved(thread)
         root.destroy()
-    menu=tk.Canvas(body,width=160,height=110,bg='#181818',highlightthickness=0)
+    menu=tk.Canvas(body,width=160,height=110,bg='#242424',highlightthickness=0)
     menu.create_polygon(20,1,140,1,159,1,159,20,159,90,159,109,140,109,
                         20,109,1,109,1,90,1,20,1,1,smooth=True,
-                        fill='#242424',outline='#383838')
+                        fill='#242424',outline='#242424')
     menu_body=tk.Frame(menu,bg='#242424')
     menu.create_window(8,8,anchor='nw',width=144,height=94,window=menu_body)
     def hide_menu():
@@ -240,9 +240,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                    y=add_button.winfo_rooty()-body.winfo_rooty()-118)
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
-    add_host=tk.Frame(input_area,bg='#181818',width=expand_button.winfo_reqwidth(),height=expand_button.winfo_reqheight())
+    add_host=tk.Frame(input_area,bg='#2b2b2b',width=expand_button.winfo_reqwidth(),height=expand_button.winfo_reqheight()+20)
     add_host.pack_propagate(False)
-    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=5,pady=1)
+    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=5,pady=11)
     add_button.pack(fill='both',expand=True)
     def dismiss_menu(event):
         widget=event.widget
