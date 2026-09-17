@@ -32,10 +32,14 @@ with tempfile.TemporaryDirectory() as folder:
  assert add.master==editor.master
  assert add.winfo_y()>editor.winfo_y()+editor.winfo_height()
  assert not any(w.cget('text')=='\u622a\u56fe' for w in buttons)
- actions=[w for w in buttons if w.cget('text').endswith('\u2191')]
+ actions=[w for w in buttons if w.cget('text') in ('\u4fdd\u5b58','\u53d1\u9001')]
  assert len(actions)==2
- assert actions[0].winfo_rootx()==actions[1].winfo_rootx()
- assert all(w.winfo_rooty()<editor.winfo_rooty() for w in actions)
+ assert actions[0].winfo_rooty()==actions[1].winfo_rooty()
+ assert actions[0].winfo_width()==actions[1].winfo_width()
+ assert 'Placeholder test' in hint.cget('text')
+ assert all(w.winfo_rooty()>=editor.winfo_rooty()+editor.winfo_height() for w in actions)
+ expand=next(w for w in buttons if w.cget('text')=='\u2197')
+ assert expand.winfo_rootx()+expand.winfo_width()<actions[0].winfo_rootx()
  print('COMPOSER_LAYOUT_OK',height,dialog.winfo_height())
  dialog.destroy()
 root.destroy()
