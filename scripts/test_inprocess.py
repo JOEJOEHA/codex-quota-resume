@@ -6,12 +6,14 @@ import os
 import tempfile
 import time
 import tkinter as tk
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 from contextlib import contextmanager
 from PIL import Image, ImageGrab
 import app
 import plan_dialog
+import tray
 from window_ui import window_handle,minimize,TaskPicker
 
 thread='00000000-0000-0000-0000-000000000001'
@@ -42,7 +44,7 @@ def loop(root,*args,**kwargs):
             assert len(dialogs)==1
             dialog=dialogs[0]
             labels=[w.cget('text') for w in walk(dialog) if isinstance(w,tk.Label)]
-            assert 'Integration task' in labels and thread not in labels
+            assert any(text.startswith('Integration task\n\n') for text in labels) and thread not in '\n'.join(labels)
             elapsed=time.perf_counter()-started
             assert dialog.winfo_viewable() and dialog.tk is root.tk
             main_rect=wintypes.RECT();child_rect=wintypes.RECT()
@@ -76,7 +78,7 @@ def loop(root,*args,**kwargs):
             assert long_dialog.title()=='任务输入框'
             long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))
             assert long_editor.winfo_viewable() and long_editor.winfo_height()>=100
-            for action in ('保存后续任务 ↑','现在发送　　 ↑','+'):
+            for action in ('保存','发送','+'):
                 control=button(long_dialog,action)
                 assert control.winfo_viewable()
                 assert control.winfo_rooty()+control.winfo_height()<=long_dialog.winfo_rooty()+long_dialog.winfo_height()
@@ -115,7 +117,7 @@ def loop(root,*args,**kwargs):
                 if 'fill' in options:colors.append(options['fill'])
                 return configure(item,**options)
             picker.flag.itemconfigure=record_flag
-            button(dialog,'保存后续任务 ↑').invoke()
+            button(dialog,'保存').invoke()
             data=json.loads((folder/'followups'/f'{thread}.json').read_text(encoding='utf-8'))
             assert data['text']=='Keep draft expanded' and len(data['images'])==8 and len(data['files'])==1
             assert data['taskName']=='Integration task' and picker.pending
@@ -129,12 +131,18 @@ def loop(root,*args,**kwargs):
             assert not picker.pending and not picker.flag.winfo_ismapped()
             button(root,'打开需求输入框').invoke();root.update()
             dialog=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+            draft=next(w for w in walk(dialog) if isinstance(w,tk.Text))
+            draft.insert('1.0','Keep draft on tray exit')
             button(root,'×').invoke();root.update()
             assert root.state()=='withdrawn' and dialog.winfo_exists()
-            button(dialog,'×').invoke()
             assert root.tray.active and root.state()=='withdrawn'
             root.tray.restore();root.update()
-            root.tray.on_exit()
+            root.tray.broadcast(2)
+            root.after(300,lambda:ready.set(True));root.wait_variable(ready)
+            assert root.state()=='withdrawn' and dialog.winfo_exists()
+            assert draft.get('1.0','end-1c')=='Keep draft on tray exit'
+            button(dialog,'×').invoke()
+            assert root.tray.closed and not root.tray.active
             print(f'INPROCESS_OK: {elapsed*1000:.0f} ms, same PID, task name, fixed width, expanded editor, 8 images, saved/sent flag, close/save')
         except Exception as error:
             errors.append(error)
@@ -144,6 +152,6 @@ def loop(root,*args,**kwargs):
     return original(root,*args,**kwargs)
 with tempfile.TemporaryDirectory() as directory:
     folder=Path(directory);source=folder/'sample.txt';source.write_text('local file',encoding='utf-8')
-    with patch.object(app.w,'latest_candidate',return_value={'threadId':thread,'key':'test-quota','quotaError':True}),patch.object(app.w,'APP_DIR',folder),patch.object(app.w,'load_state',return_value={}),patch.object(app.w,'find_codex',return_value='codex'),patch.object(app.w.codex_status,'connection',connection),patch.object(app,'monitor_indicator',return_value=('', '', True)),patch.object(app.subprocess,'Popen') as launch,patch.object(tk.Tk,'mainloop',loop):
+    with patch.object(tray,'GROUP','CodexQuotaResume.Test.'+uuid.uuid4().hex),patch.object(app.w,'latest_candidate',return_value={'threadId':thread,'key':'test-quota','quotaError':True}),patch.object(app.w,'APP_DIR',folder),patch.object(app.w,'load_state',return_value={}),patch.object(app.w,'find_codex',return_value='codex'),patch.object(app.w.codex_status,'connection',connection),patch.object(app,'monitor_indicator',return_value=('', '', True)),patch.object(app.subprocess,'Popen') as launch,patch.object(tk.Tk,'mainloop',loop):
         app.show()
 assert not errors,errors

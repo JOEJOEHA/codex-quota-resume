@@ -51,6 +51,8 @@ Follow your device's execution policy. Pausing prevents subsequent checks but do
 
 `Ctrl+V` pastes screenshots; `Ctrl+Enter` saves. The screenshot button opens the Windows capture tool. “+ 添加 → 添加文件” adds ordinary files. The tray icon restores the main window; its menu opens or exits the interface.
 
+On Windows, multiple app instances share one tray icon. Click it to restore all main windows; its menu opens all main windows or exits all interfaces while preserving open drafts. Another instance takes over when the icon's owner exits. After updating, exit all old instances through their tray menus and start the new version to remove the old icons.
+
 An optional source Skill can be installed by placing the repository in your Codex skills directory as `codex-quota-resume`, with `SKILL.md` at that directory's root. Copying the Skill alone does not enable monitoring.
 
 ## macOS development
@@ -83,6 +85,8 @@ python scripts/test_app.py
 ```
 
 These use temporary data and simulated responses. For macOS, also follow the native UI, locking, LaunchAgent and packaging checks in `.github/workflows/macos.yml` on `macos-port`. CI does not have a signed-in personal Codex account and cannot prove real quota recovery. Windows builds use `scripts/build_windows.ps1` after installing PyInstaller.
+
+On a signed-in Windows desktop with Explorer running, run `python scripts/test_tray.py`, `python scripts/test_tray_multi.py` and `python scripts/test_inprocess.py` to check one shared icon, process takeover and window/draft behavior. Tray tests use isolated groups and do not control existing user windows.
 
 ## Data and limits
 
