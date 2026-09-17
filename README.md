@@ -23,7 +23,7 @@
 
 ## 下载本地软件（推荐）
 
-[下载 Windows EXE](https://github.com/JOEJOEHA/codex-quota-resume/releases/download/desktop-preview-2026-09-16/CodexQuotaResume.exe) · [Windows / macOS 下载与发布说明](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest)
+[下载 Windows EXE（v3.0.0-beta.37）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.37/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [macOS 预览版下载](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
 
 M1 / M2 / M3 等 Apple Silicon 芯片选择 `macOS-arm64-preview.zip`；Intel Mac 选择 `macOS-x86_64-preview.zip`。两种架构均已通过 CI 构建，不代表每种芯片或目标设备都已实机验收。macOS 预览仅有 ad-hoc 签名，尚无 Developer ID 签名与 Apple 公证。
 

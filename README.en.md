@@ -10,7 +10,7 @@ A local desktop utility that resumes unfinished Codex tasks interrupted by expli
 
 | Platform | Release asset | Status |
 |---|---|---|
-| Windows 10 / 11 | `CodexQuotaResume.exe` | v3.0.0-beta.15; includes Python, Tkinter and Pillow |
+| Windows 10 / 11 | `CodexQuotaResume.exe` | v3.0.0-beta.37; includes Python, Tkinter and Pillow |
 | Apple Silicon: M1 / M2 / M3 and other M-series Macs | `CodexQuotaResume-macOS-arm64-preview.zip` | Development preview |
 | Intel Mac | `CodexQuotaResume-macOS-x86_64-preview.zip` | Development preview |
 
@@ -19,6 +19,8 @@ Download from [Releases](https://github.com/JOEJOEHA/codex-quota-resume/releases
 **macOS development source is on [`macos-port`](https://github.com/JOEJOEHA/codex-quota-resume/tree/macos-port), with [draft PR #1](https://github.com/JOEJOEHA/codex-quota-resume/pull/1). `main` does not yet contain the port.** Read the [handoff](docs/macos-handoff.md) before starting.
 
 ## Behavior
+
+The v3.0.0-beta.37 release updates Windows only. Download the unchanged macOS previews from [v3.0.0-beta.36](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36).
 
 - The primary watcher checks every 60 seconds; an independent backup checks every 300 seconds. Both share a process lock and send records.
 - Only explicit quota interruptions of unfinished work qualify. Zero remaining quota alone, normal completion and ordinary network errors do not trigger resumption. Live quota is checked before sending.
