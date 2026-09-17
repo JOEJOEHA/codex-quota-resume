@@ -92,7 +92,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         editor.edit_modified(False)
         refresh_placeholder()
     hint.bind('<Button-1>',begin_input)
-    editor.bind('<FocusIn>',lambda e:hint.place_forget())
+    editor.bind('<Button-1>',begin_input)
     editor.bind('<FocusOut>',refresh_placeholder)
     editor.bind('<<Modified>>',changed)
     def resize_editor(event):
