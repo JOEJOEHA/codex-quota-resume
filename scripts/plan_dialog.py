@@ -29,7 +29,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             for timer in timers:root.after_cancel(timer)
     root.bind('<Destroy>',cancel_timers,add='+')
     root.title('任务输入框')
-    body = rounded_window(root, 430, 535)
+    body = rounded_window(root, 430, 635)
     font = (FONT_FAMILY, 11)
     def label(parent, text, color='#eeeeee', size=11):
         item = tk.Label(parent, text=text, bg='#181818', fg=color, font=(FONT_FAMILY, size),wraplength=374,justify='left')
@@ -56,9 +56,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         task_label.configure(text=short + ('…' if short != caption else ''))
     task_label.bind('<Configure>', fit_caption)
     bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
-    hint = label(body, 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除', '#aaaaaa', 11)
-    hint.pack(side='bottom', anchor='w', pady=(8, 0))
-    if sys.platform == 'darwin':hint.configure(text='⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除')
+    hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
+    if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
@@ -90,6 +89,24 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     editor = tk.Text(input_area, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
                      selectbackground='#365c91', relief='flat', highlightthickness=0,
                      wrap='word', font=font, undo=True, height=8, padx=12, pady=12)
+    hint=tk.Label(editor,name='placeholder',text=hint_text,bg='#2b2b2b',fg='#999999',
+                  font=font,justify='left',anchor='nw',wraplength=310,cursor='xterm')
+    def refresh_placeholder(event=None):
+        if editor.get('1.0','end-1c') or root.focus_get()==editor:
+            hint.place_forget()
+        else:
+            hint.place(x=12,y=12,relwidth=1,width=-24)
+    def begin_input(event=None):
+        hint.place_forget()
+        editor.focus_set()
+        return 'break'
+    def changed(event=None):
+        editor.edit_modified(False)
+        refresh_placeholder()
+    hint.bind('<Button-1>',begin_input)
+    editor.bind('<FocusIn>',lambda e:hint.place_forget())
+    editor.bind('<FocusOut>',refresh_placeholder)
+    editor.bind('<<Modified>>',changed)
     def resize_editor(event):
         w,h=event.width,event.height
         r=24
@@ -306,7 +323,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         root.bind('<Command-Return>',save)
     root.bind('<Escape>',escape)
     refresh();refresh_files()
-    editor.focus_set()
+    refresh_placeholder()
     def reveal():
         if parent is not None:
             root.update_idletasks()
@@ -314,6 +331,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         root.deiconify()
         if parent is not None:place_beside(root,parent)
         root.lift()
+        root.focus_set()
+        refresh_placeholder()
         root.attributes('-topmost', True)
         root.update_idletasks()
         if on_ready and root.winfo_viewable():
