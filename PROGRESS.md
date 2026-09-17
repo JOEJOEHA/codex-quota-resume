@@ -58,3 +58,6 @@ The latest Windows changes are synchronized to macos-port. macOS packages remain
 - macOS 同步提交 `f72015f`，两个架构构建中，CI `35164446739`。
 - 新测试覆盖：正常入队续跑、长时间 exec resume 未返回时发送、10 秒下限、无额度等待、队列去重、持久化时间；原监控与窗口回归通过。
 - Release `v3.0.0-beta.25` 草稿已创建，等待 Mac 构建附件。真实额度完整周期与 Mac 实机验收仍未宣称完成。
+
+
+Release verification: v3.0.0-beta.25 is now public and Latest. Windows EXE, macOS arm64 and x86_64 ZIPs, and SHA256SUMS.txt are uploaded. Both macOS jobs in CI 35164446739 passed; downloaded ZIP hashes match CI checksums. This supersedes the earlier draft/building status above.
