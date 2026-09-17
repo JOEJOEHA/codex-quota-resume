@@ -47,7 +47,7 @@ def mainloop(root):
             button(root, '打开需求输入框').invoke()
             root.update()
             dialog = next(x for x in root.winfo_children() if isinstance(x, tk.Toplevel))
-            assert dialog.winfo_width() == 430 and dialog.winfo_height() == 635
+            assert dialog.winfo_width() == 430 and dialog.winfo_height() == 535
             assert abs(dialog.winfo_y()-root.winfo_y()) <= 2
             editor = next(x for x in walk(dialog) if isinstance(x, tk.Text))
             editor.insert('1.0', '草稿保留')
@@ -89,7 +89,7 @@ def mainloop(root):
                     root.after_cancel(root.tray.timer)
                     root.tray.poll();root.update()
                     assert root.winfo_exists() and dialog.winfo_exists()  # Exit keeps open draft alive.
-                    button(dialog,'保存后续任务 ↑').invoke()
+                    button(dialog,'保存').invoke()
                     plan = json.loads(app.w.plan_path(thread).read_text(encoding='utf-8'))
                     assert plan['text'] == '草稿保留 + 展开编辑' and plan['status'] == 'saved'
                     assert len(plan['images']) == 6
