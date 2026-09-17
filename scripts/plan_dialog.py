@@ -1,7 +1,6 @@
 """Local follow-up composer; no network or model calls."""
 import json
 import shutil
-import subprocess
 import time
 import uuid
 import ctypes
@@ -41,7 +40,11 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     title = label(top, '任务输入框', size=16); title.pack(side='left')
     window_controls(root,top,font,on_close=lambda:close_draft())
     bind_drag(root, top, title)
-    label(body, '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10).pack(anchor='w', pady=(8, 2))
+    header_content=tk.Frame(body,bg='#181818');header_content.pack(fill='x',pady=(10,4))
+    actions=tk.Frame(header_content,bg='#181818');actions.pack(side='right',anchor='n',padx=(10,0))
+    description=label(header_content, '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送', '#aaaaaa', 10)
+    description.configure(wraplength=200)
+    description.pack(side='left',fill='x',expand=True,anchor='n')
     # A thread without a name can supply its entire prompt as the preview.
     # Keep that metadata on one line so the editable area always remains visible.
     caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
@@ -55,7 +58,6 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             short = short[:-1]
         task_label.configure(text=short + ('…' if short != caption else ''))
     task_label.bind('<Configure>', fit_caption)
-    bottom = tk.Frame(body, bg='#181818'); bottom.pack(side='bottom', fill='x', pady=(12, 0))
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
     if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
     preview_area=tk.Frame(body,bg='#181818')
@@ -114,8 +116,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         input_area.create_polygon(r,0,w-r,0,w,0,w,r,w,h-r,w,h,w-r,h,
                                   r,h,0,h,0,h-r,0,r,0,0,smooth=True,
                                   fill='#2b2b2b',outline='',tags='surface')
-        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-46))
-        expand_host.place(x=max(0,w-38),y=max(0,h-32))
+        editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-58))
+        expand_host.place(x=max(0,w-38),y=max(0,h-36))
+        add_button.place(x=12,y=max(0,h-38))
     input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
@@ -196,21 +199,6 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                 return 'break'
         except (OSError, ValueError) as error:
             messagebox.showerror('无法粘贴图片', str(error), parent=root)
-    def screenshot():
-        root.withdraw()
-        if sys.platform == 'darwin':
-            try:process=subprocess.Popen(['/usr/sbin/screencapture','-i','-c'])
-            except OSError as error:
-                root.deiconify();messagebox.showerror('无法截图',str(error),parent=root);return
-            def finished():
-                if process.poll() is None:timers.append(root.after(100,finished));return
-                root.deiconify();root.lift()
-                hint.configure(text='截图完成后按 ⌘V 添加；首次使用请允许系统屏幕录制权限。')
-            timers.append(root.after(100,finished))
-            return
-        subprocess.Popen(['explorer.exe', 'ms-screenclip:'])
-        timers.append(root.after(1800, root.deiconify))
-        hint.configure(text='截图后回到这里，按 Ctrl+V 添加截图')
     expanded=[None,None]
     def collapse_editor():
         window,large=expanded
@@ -298,8 +286,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                    y=add_button.winfo_rooty()-body.winfo_rooty()-118)
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
-    add_button=button(bottom,'+ 添加',toggle_menu)
-    add_button.pack(side='left')
+    add_button=RoundedButton(input_area,text='+',command=toggle_menu,font=font,padx=10,pady=3)
     def dismiss_menu(event):
         widget=event.widget
         while widget is not None:
@@ -310,12 +297,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     def escape(event):
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
         else:close_draft()
-    button(bottom, '截图', screenshot).pack(side='left', padx=8)
-    send_row=tk.Frame(body,bg='#181818')
-    send_row.pack(side='bottom',fill='x',before=bottom,pady=(12,0))
     action_width=tkfont.Font(font=font).measure('保存后续任务 ↑')+28
-    button(send_row, '现在发送　　 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(side='right')
-    button(bottom, '保存后续任务 ↑', save, width_px=action_width).pack(side='right')
+    button(actions, '保存后续任务 ↑', save, width_px=action_width).pack()
+    button(actions, '现在发送　　 ↑', lambda:save(send_now=True), True, width_px=action_width).pack(pady=(12,0))
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     if sys.platform == 'darwin':

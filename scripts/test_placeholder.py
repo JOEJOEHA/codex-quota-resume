@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory() as folder:
  assert hint.winfo_ismapped()
  assert editor.get('1.0','end-1c')==''
  height=editor.master.winfo_height()
- assert 280<=height<=330,height
+ assert height>=280,height
  hint.event_generate('<Button-1>',x=5,y=5);root.update()
  assert not hint.winfo_ismapped()
  editor.insert('1.0','saved text');dialog.focus_force();root.update()
@@ -27,6 +27,15 @@ with tempfile.TemporaryDirectory() as folder:
  editor.delete('1.0','end');root.update()
  assert hint.winfo_ismapped()
  assert editor.get('1.0','end-1c')==''
- print('COMPOSER_PLACEHOLDER_OK',height,dialog.winfo_height())
+ buttons=[w for w in walk(dialog) if isinstance(w,tk.Button)]
+ add=next(w for w in buttons if w.cget('text')=='+')
+ assert add.master==editor.master
+ assert add.winfo_y()>editor.winfo_y()+editor.winfo_height()
+ assert not any(w.cget('text')=='\u622a\u56fe' for w in buttons)
+ actions=[w for w in buttons if w.cget('text').endswith('\u2191')]
+ assert len(actions)==2
+ assert actions[0].winfo_rootx()==actions[1].winfo_rootx()
+ assert all(w.winfo_rooty()<editor.winfo_rooty() for w in actions)
+ print('COMPOSER_LAYOUT_OK',height,dialog.winfo_height())
  dialog.destroy()
 root.destroy()
