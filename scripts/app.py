@@ -236,7 +236,6 @@ def show():
         background(lambda:w.request_plan_send(thread))
     button(plan_actions,'发送已存任务',send_saved)
 
-    label('续跑请求后 10 秒发送已存需求，不等待验收标记。', '#999999',10)
     names={'followup-waiting-delay':'续跑已请求，等待 10 秒发送后续需求','waiting-quota':'等待额度恢复','no-quota-stall':'未发现需要续跑的额度中断任务',
            'resuming':'正在续跑','resumed':'本次续跑已返回','queued-awaiting-start':'已交给 Codex，等待开始',
            'waiting-start':'等待任务开始确认','dispatch-unconfirmed':'任务尚未确认开始，请查看运行记录',
