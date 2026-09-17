@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory() as folder:
  assert 'Placeholder test' in hint.cget('text')
  assert all(w.winfo_rooty()>=editor.winfo_rooty()+editor.winfo_height() for w in actions)
  expand=next(w for w in buttons if w.cget('text')=='\u2197')
- assert add.winfo_height()==expand.winfo_height()+20
+ assert add.winfo_height()==expand.winfo_height()
  assert expand.winfo_rootx()+expand.winfo_width()<actions[0].winfo_rootx()
  print('COMPOSER_LAYOUT_OK',height,dialog.winfo_height())
  dialog.destroy()
