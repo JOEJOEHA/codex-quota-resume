@@ -29,8 +29,8 @@ with tempfile.TemporaryDirectory() as folder:
  assert editor.get('1.0','end-1c')==''
  buttons=[w for w in walk(dialog) if isinstance(w,tk.Button)]
  add=next(w for w in buttons if w.cget('text')=='+')
- assert add.master==editor.master
- assert add.winfo_y()>editor.winfo_y()+editor.winfo_height()
+ assert add.master.cget('bg')=='#2b2b2b'
+ assert add.winfo_rooty()>editor.winfo_rooty()+editor.winfo_height()
  assert not any(w.cget('text')=='\u622a\u56fe' for w in buttons)
  actions=[w for w in buttons if w.cget('text') in ('\u4fdd\u5b58','\u53d1\u9001')]
  assert len(actions)==2

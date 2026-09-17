@@ -26,7 +26,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             for timer in timers:root.after_cancel(timer)
     root.bind('<Destroy>',cancel_timers,add='+')
     root.title('任务输入框')
-    body = rounded_window(root, 430, 635)
+    body = rounded_window(root, 430, 535)
     font = ('Microsoft YaHei UI', 11)
     def label(parent, text, color='#eeeeee', size=11):
         item = tk.Label(parent, text=text, bg='#181818', fg=color, font=('Microsoft YaHei UI', size),wraplength=374,justify='left')
@@ -101,7 +101,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         editor.place(x=12,y=12,width=max(1,w-24),height=max(1,h-76))
         actions.place(x=max(0,w-12),y=max(0,h-10),anchor='se')
         expand_host.place(x=max(0,w-24-actions.winfo_reqwidth()),y=max(0,h-14),anchor='se')
-        add_button.place(x=12,y=max(0,h-38))
+        add_host.place(x=12,y=max(0,h-38))
     input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
@@ -240,7 +240,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                    y=add_button.winfo_rooty()-body.winfo_rooty()-118)
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
-    add_button=RoundedButton(input_area,text='+',command=toggle_menu,font=font,padx=10,pady=3)
+    add_host=tk.Frame(input_area,bg='#2b2b2b',width=38,height=32)
+    add_host.pack_propagate(False)
+    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=10,pady=3)
+    add_button.pack(fill='both',expand=True)
     def dismiss_menu(event):
         widget=event.widget
         while widget is not None:
