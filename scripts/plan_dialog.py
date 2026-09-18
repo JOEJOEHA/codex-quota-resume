@@ -27,7 +27,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if event.widget==root:
             for timer in timers:root.after_cancel(timer)
     root.bind('<Destroy>',cancel_timers,add='+')
-    root.title('任务输入框')
+    task_title = ' '.join((task_name or old.get('taskName') or '当前任务').split()) or '当前任务'
+    root.title(task_title if sys.platform=='win32' else '任务输入框')
     body = rounded_window(root, 430, 535)
     font = (FONT_FAMILY, 11)
     def label(parent, text, color='#eeeeee', size=11):
@@ -36,24 +37,39 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         return item
     def button(parent, text, command, accent=False, width_px=None):
         return RoundedButton(parent,text=text,command=command,bg='#2d6acb' if accent else '#2b2b2b',font=font,width_px=width_px)
+    caption = task_title[:60] + ('…' if len(task_title)>60 else '')
+    def task_heading(window,header,on_close=None):
+        window_controls(window,header,font,on_close=on_close)
+        heading=label(header,caption,size=16)
+        heading.configure(anchor='w',wraplength=0)
+        heading.pack(side='left',fill='x',expand=True)
+        heading_font=tkfont.Font(font=heading.cget('font'))
+        def fit(event):
+            text=caption
+            while len(text)>1 and heading_font.measure(text)>max(0,event.width-4):
+                text=text[:-2]+'…'
+            heading.configure(text=text)
+        heading.bind('<Configure>',fit)
+        bind_drag(window,header,heading)
     top = tk.Frame(body, bg='#181818'); top.pack(fill='x')
-    title = label(top, '任务输入框', size=16); title.pack(side='left')
-    window_controls(root,top,font,on_close=lambda:close_draft())
-    bind_drag(root, top, title)
-    caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
-    root.title(caption + ' — 任务输入框')
-    caption = caption[:60] + ('…' if len(caption)>60 else '')
-    task_label=tk.Label(body,name='task_caption',text=caption,bg='#181818',fg='#dddddd',
-                        font=(FONT_FAMILY,11),anchor='w',height=1)
-    task_label.pack(fill='x',pady=(6,0))
-    caption_font=tkfont.Font(font=task_label.cget('font'))
-    def fit_caption(event):
-        text=caption
-        while text and caption_font.measure(text+'…')>event.width-4:text=text[:-1]
-        task_label.configure(text=text+('…' if text!=caption else ''))
-    task_label.bind('<Configure>',fit_caption)
-    rules=label(body,'保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
-    rules.pack(fill='x',pady=(2,0))
+    if sys.platform=='win32':
+        task_heading(root,top,on_close=lambda:close_draft())
+    else:
+        title = label(top, '任务输入框', size=16); title.pack(side='left')
+        window_controls(root,top,font,on_close=lambda:close_draft())
+        bind_drag(root, top, title)
+        root.title(task_title + ' — 任务输入框')
+        task_label=tk.Label(body,name='task_caption',text=caption,bg='#181818',fg='#dddddd',
+                            font=(FONT_FAMILY,11),anchor='w',height=1)
+        task_label.pack(fill='x',pady=(6,0))
+        caption_font=tkfont.Font(font=task_label.cget('font'))
+        def fit_caption(event):
+            text=caption
+            while text and caption_font.measure(text+'…')>event.width-4:text=text[:-1]
+            task_label.configure(text=text+('…' if text!=caption else ''))
+        task_label.bind('<Configure>',fit_caption)
+        rules=label(body,'保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
+        rules.pack(fill='x',pady=(2,0))
     if old.get('status')=='cancelled':
         label(body,'原任务已取消，草稿保留；重新保存或发送后才会投递。','#e7b66a',9).pack(fill='x')
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
@@ -214,13 +230,16 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if expanded[0] is not None:
             expanded[0].deiconify();expanded[0].lift();return
         window=tk.Toplevel(root)
-        window.title(caption+' — 编辑后续需求')
+        window.title((task_title if sys.platform=='win32' else caption)+' — 编辑后续需求')
         panel=rounded_window(window,760,620)
         header=tk.Frame(panel,bg='#181818');header.pack(fill='x',pady=(0,12))
-        heading=label(header,'编辑后续需求',size=16);heading.pack(side='left')
+        if sys.platform=='win32':
+            task_heading(window,header,on_close=collapse_editor)
+        else:
+            heading=label(header,'编辑后续需求',size=16);heading.pack(side='left')
+            window_controls(window,header,font,on_close=collapse_editor)
+            bind_drag(window,header,heading)
         label(panel,caption,size=11).pack(fill='x',pady=(0,6))
-        window_controls(window,header,font,on_close=collapse_editor)
-        bind_drag(window,header,heading)
         large=tk.Text(panel,bg='#2b2b2b',fg='#f3f3f3',insertbackground='white',
                       relief='flat',highlightthickness=0,wrap='word',font=font,undo=True,padx=14,pady=14)
         large.pack(fill='both',expand=True)
