@@ -24,7 +24,9 @@ class Appearance:
     def __init__(self,root):
         self.root,self.name=root,system_theme()
         self.bindings={};self.callbacks=[];self.timer=None
-        root.bind('<Destroy>',self.destroyed,add='+');self.poll()
+        root.bind('<Destroy>',self.destroyed,add='+')
+        self.initial_timer=root.after_idle(self.native_appearance)
+        self.poll()
     @property
     def colors(self):return PALETTES[self.name]
     def bind(self,widget,**roles):
@@ -54,8 +56,18 @@ class Appearance:
         visit(root)
 
     def changed(self,callback):self.callbacks.append(callback)
+    def native_appearance(self):
+        self.initial_timer=None
+        if not self.root.winfo_exists():return
+        from AppKit import NSApplication,NSAppearance
+        name='NSAppearanceNameDarkAqua' if self.name=='dark' else 'NSAppearanceNameAqua'
+        appearance=NSAppearance.appearanceNamed_(name)
+        for window in NSApplication.sharedApplication().windows():
+            if str(window.title())==self.root.title():window.setAppearance_(appearance)
+
     def apply(self,name):
         self.name=name
+        self.native_appearance()
         for widget in list(self.bindings):
             if widget.winfo_exists():self.paint(widget)
             else:del self.bindings[widget]
@@ -66,6 +78,8 @@ class Appearance:
         if name!=self.name:self.apply(name)
         self.timer=self.root.after(1500,self.poll)
     def destroyed(self,event):
+        if event.widget==self.root and self.initial_timer:
+            self.root.after_cancel(self.initial_timer);self.initial_timer=None
         if event.widget==self.root and self.timer:
             self.root.after_cancel(self.timer);self.timer=None
 

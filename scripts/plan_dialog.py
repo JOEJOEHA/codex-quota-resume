@@ -38,7 +38,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     body = rounded_window(root, 480 if mac_ui else 430, 650 if mac_ui else 535)
     font = (FONT_FAMILY, 11)
     def label(parent, text, color='#eeeeee', size=11):
-        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=(FONT_FAMILY, size),wraplength=374,justify='left')
+        item = tk.Label(parent, text=text, bg='#181818', fg=color, font=(FONT_FAMILY, size),wraplength=374,justify='left',anchor='w' if mac_ui else 'center')
         bind_drag(root, item)
         return item
     def button(parent, text, command, accent=False, width_px=None):

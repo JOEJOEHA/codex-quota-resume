@@ -8,6 +8,7 @@ from macos_appearance import Appearance,status_presentation
 
 
 def build(root,version,close_main):
+    root.title('Codex Quota Resume')
     appearance=Appearance(root);colors=appearance.colors
     frame=rounded_window(root,480,650,surface=colors['window'])
     appearance.bind(root,bg='window');appearance.bind(frame,bg='window')
@@ -34,7 +35,7 @@ def build(root,version,close_main):
     select=TaskPicker(card,(FONT_FAMILY,11),light=appearance.name=='light');select.pack(fill='x')
     select.apply_appearance(appearance)
     summary=label(card,'尚未添加后续要求',10,role='secondary',bg='card');summary.pack(fill='x',pady=(16,8))
-    preview=label(card,'保存后，后续要求会在原任务满足投递条件时发送。',11,bg='card');preview.configure(wraplength=380);preview.pack(fill='both',expand=True,pady=(0,16))
+    preview=label(card,'保存后，后续要求会在原任务满足投递条件时发送。',11,bg='card');preview.configure(wraplength=380,anchor='nw');preview.pack(fill='both',expand=True,pady=(0,16))
     plan_actions=box(card,'card');plan_actions.pack(fill='x')
     compose=button(plan_actions,'+ 添加后续任务',primary=True);compose.pack(side='left',padx=(0,8))
     send=button(plan_actions,'立即发送');send.pack(side='right')

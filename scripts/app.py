@@ -317,7 +317,7 @@ def show():
                 text,color,enabled=value
                 monitor_enabled[0]=enabled
                 if mac_ui:
-                    enable_button.configure(text='更新状态' if enabled else '启用监控')
+                    enable_button.configure(text='更新状态' if enabled else ('恢复监控' if (w.APP_DIR/'paused.flag').exists() else '启用监控'))
                     mac_ui.state(code,enabled,(w.APP_DIR/'paused.flag').exists())
                 else:
                     monitor_dot.itemconfigure(dot,image=dot_images[enabled])
