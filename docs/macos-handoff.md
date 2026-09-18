@@ -17,8 +17,8 @@ Copy either complete prompt below into Codex on the contributor's Mac. Use the c
 一、接手与贡献身份
 1. 检查当前目录、未提交修改、macOS/芯片架构、Git、Python/Tk、GitHub 登录和 Codex CLI。使用我的 GitHub 账号和我自己的提交作者身份，不使用项目所有者的身份或凭据。缺少登录、作者邮箱或系统权限时，只向我索取实际缺少的信息；不泄露令牌。
 2. 阅读适用的 AGENTS.md、README.md、README.en.md、CONTRIBUTING.md，再读取 macOS 开发分支上的 PROGRESS.md、docs/macos.md、实际源码与测试。不要把 Windows 安装 Skill 当成 Mac 安装步骤运行。
-3. 当前 macOS 源码在上游 macos-port，草稿 PR #1：https://github.com/JOEJOEHA/codex-quota-resume/pull/1 。main 目前仍是 Windows 程序。最新已发布预览标签 desktop-preview-2026-09-16 对应 cbaa818；Windows 基线 v3.0.0-beta.15 / 4edb3cd。必须 fetch 后从最新开发代码接手，不退回基线重写。
-4. 默认使用我的 Fork；检查已有 Fork/remote 后再创建或复用，origin 指向我的 Fork，upstream 指向 JOEJOEHA/codex-quota-resume。若 PR #1 未合并，从 upstream/macos-port 创建 macos/<简短英文主题> 分支；若已合并，检查实际文件后从 upstream/main 开始。Fork 只有 main 时仍须 fetch 上游 macos-port。不覆盖现有修改、不 force push。
+3. macOS 移植及监控环境兼容性修复已合入 main。必须 fetch 后从 upstream/main 接手，保留 Windows beta.37 单托盘修复，不退回旧基线重写。
+4. 默认使用我的 Fork；检查已有 Fork/remote 后再创建或复用，origin 指向我的 Fork，upstream 指向 JOEJOEHA/codex-quota-resume。从 upstream/main 创建 macos/<简短英文主题> 分支，不覆盖现有修改、不 force push。
 5. 我授权本任务范围内的源码修改、本地隔离测试、构建、向我的 Fork push，以及向原仓库创建/更新贡献 PR；不授权直接合并上游、发布正式版本、购买额度或使用他人凭据。仅 Contributor 贡献流程不需要仓库写权限。保留我的真实作者归属；GitHub 贡献图还取决于合并默认分支等条件。
 
 二、当前状态：继续验收和修复，不从零移植
@@ -47,7 +47,7 @@ M1/M2/M3 使用 arm64 包，Intel 使用 x86_64 包；不能声称每种芯片�
 
 五、提交和交付
 代码标识符、文件、分支和资产名保持英文/ASCII；提交、PR、发布说明使用中英文标题与正文，例如 fix(macos): Restore menu-bar window / 修复菜单栏窗口恢复。同步 README.md 与 README.en.md 的状态。
-向我的 Fork push，向上游 macos-port 提贡献 PR（移植已合并才以 main 为 base），避免重复提交整个已有移植。用文件传递多行 PR 正文，包含中文/English 的改动、验证、待验收项。任何必要验收缺失时保持 Draft；不自行合并 PR 或发布稳定版。
+向我的 Fork push，向上游 main 提贡献 PR，避免重复提交整个已有移植。用文件传递多行 PR 正文，包含中文/English 的改动、验证、待验收项。任何必要验收缺失时保持 Draft；不自行合并 PR 或发布稳定版。
 最后给我 PR 链接、构建产物位置、通过的测试、仍需人工条件。只有原任务全部目标验收完成才能在最终回复末尾单独输出 [QUOTA_RESUME_GOAL_COMPLETE]；等待权限/信息/设备或实测未完成时绝不输出。完成当前可执行交付后停止，不另建后台自动任务。
 ```
 
@@ -62,8 +62,8 @@ Handoff snapshot: 2026-09-16. Fetch and inspect current remote state before rely
 1. Repository and identity
 Inspect the current checkout, uncommitted changes, macOS/chip architecture, Git, Python/Tk, GitHub authentication and Codex CLI. Use MY GitHub account and actual author identity, never the owner's credentials or identity. Ask only for missing sign-in, author information or OS interaction; never expose tokens.
 Read applicable AGENTS.md, both READMEs, CONTRIBUTING.md, then PROGRESS.md, docs/macos.md, actual source and tests on the development branch. Do not execute the Windows installation Skill on macOS.
-The port currently lives on upstream macos-port in draft PR #1: https://github.com/JOEJOEHA/codex-quota-resume/pull/1 . main still contains the Windows application. Preview tag desktop-preview-2026-09-16 points to cbaa818; the Windows baseline is v3.0.0-beta.15 / 4edb3cd. Continue from current code rather than restarting the port.
-Create or reuse MY fork after checking existing remotes: origin is my fork; upstream is JOEJOEHA/codex-quota-resume. Fetch upstream/macos-port even if the fork only copied main. Create macos/<short-topic> from upstream/macos-port while PR #1 is unmerged; if merged, inspect files and start from current upstream/main. Preserve existing changes; do not force-push.
+The macOS port and monitor environment compatibility fixes are included in main. Fetch upstream/main and preserve the Windows beta.37 single-tray fix; do not restart the port from an older baseline.
+Create or reuse MY fork after checking remotes: origin is my fork; upstream is JOEJOEHA/codex-quota-resume. Create macos/<short-topic> from current upstream/main. Preserve existing changes; do not force-push.
 I authorize scoped source changes, isolated local tests/builds, pushing to my fork and creating/updating an upstream contribution PR. This does not authorize merging upstream, publishing stable releases, purchasing quota or using another person's credentials. Contributor work does not require collaborator access. Preserve my authorship; GitHub credit also depends on its default-branch/email rules.
 
 2. Existing implementation
@@ -92,6 +92,6 @@ Update PROGRESS.md and Chinese/English docs with device, OS/chip, commands/resul
 
 5. Contribution and delivery
 Keep identifiers, filenames, branches and asset names in English/ASCII. Use Chinese AND English commit/PR/release titles and explanations, e.g. fix(macos): Restore menu-bar window / 修复菜单栏窗口恢复. Keep README.md and README.en.md status aligned.
-Push to my fork and open/update an upstream PR targeting macos-port until the port is merged, then main. Avoid duplicating the existing port in the contribution diff. Supply multiline PR bodies through a file, including Chinese/English changes, validation and remaining work. Keep it draft if required acceptance is missing. Do not self-merge or publish a stable release.
+Push to my fork and open/update an upstream PR targeting main. Avoid duplicating the existing port in the contribution diff. Supply multiline PR bodies through a file, including Chinese/English changes, validation and remaining work. Keep it draft if required acceptance is missing. Do not self-merge or publish a stable release.
 Deliver the PR URL, local artifacts, passed checks and remaining external requirements. Only append [QUOTA_RESUME_GOAL_COMPLETE] as the final standalone line when ALL original goals have passed acceptance; never while waiting for information/permission/hardware or missing real validation. Stop after the actionable handoff; do not create extra background automations.
 ```

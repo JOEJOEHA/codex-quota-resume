@@ -7,8 +7,8 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-import msvcrt
 import quota_watcher as w
+patch.object(w,'find_codex',return_value='codex').start()
 patch.object(w.codex_status,"ready",return_value="available").start()
 patch.object(w.codex_status,"backup_candidate",side_effect=lambda exe,sent,since=0: w.latest_candidate(time.time(),sent,since)).start()
 
@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory() as directory:
             assert send.call_count == 2
         # A real second Python process cannot pass the primary's OS lock.
         with (root/'monitor.lock').open('r+b') as lock:
-            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            w.lock_monitor(lock)
             code = (f'import sys;sys.path.insert(0,{str(Path(w.__file__).parent)!r});'
                     f'import quota_watcher as w;from pathlib import Path;w.APP_DIR=Path({str(root)!r});'
                     'print(w.run_once(backup=True))')

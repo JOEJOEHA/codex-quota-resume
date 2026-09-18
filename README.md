@@ -2,9 +2,9 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-**Windows Beta / macOS Developer Preview（开发预览）**。macOS 源码目前在 [`macos-port`](https://github.com/JOEJOEHA/codex-quota-resume/tree/macos-port)，尚未合并到主分支；不要从 `main` 开始 macOS 开发。macOS 尚未完成目标设备及真实额度恢复验收。
+**Windows Beta / macOS Developer Preview（开发预览）**。macOS 移植和监控配置兼容性修复已合入 `main`，请从主分支继续开发。macOS 尚未完成目标设备及真实额度恢复验收。
 
-[桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](https://github.com/JOEJOEHA/codex-quota-resume/blob/macos-port/docs/macos.md)
+[桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](docs/macos.md)
 
 为因额度耗尽而中断的 Codex 任务提供本地自动续跑。主监控读取日志，备用监控直接读取 Codex 任务状态；发送前检查**实时可用额度**，不要求旧日志显示 100%，也不固定多等五分钟。
 
@@ -26,6 +26,8 @@
 [下载 Windows EXE（v3.0.0-beta.37）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.37/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [macOS 预览版下载](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
 
 M1 / M2 / M3 等 Apple Silicon 芯片选择 `macOS-arm64-preview.zip`；Intel Mac 选择 `macOS-x86_64-preview.zip`。两种架构均已通过 CI 构建，不代表每种芯片或目标设备都已实机验收。macOS 预览仅有 ad-hoc 签名，尚无 Developer ID 签名与 Apple 公证。
+
+macOS 源码开发、构建及本机验证见 [macOS 开发说明](docs/macos.md)。本分支支持从 `Codex.app` 或包含 Codex CLI 的 `ChatGPT.app` 自动查找可执行文件，适用于 Finder 启动时没有终端 PATH 的情况；`--doctor` 会逐项输出兼容性检查结果，失败时保留已完成的检查并返回非零退出码。
 
 主界面最小化或关闭后保留在系统托盘，点击循环箭头图标恢复，右键可打开或退出界面。退出界面不停止后台计划任务；若有打开的草稿，关闭草稿后再退出。输入框仍可从任务栏恢复。
 
@@ -92,9 +94,9 @@ python -m pip install -r requirements.txt
 
 `Ctrl+V` 粘贴截图，`Ctrl+Enter` 保存。截图按钮打开 Windows 截图工具，截图后回到输入框粘贴。图片没有固定数量上限，缩略图横向滚动。
 
-后续任务只有在被监控器恢复的原任务明确完成，并输出 `[QUOTA_RESUME_GOAL_COMPLETE]` 后才发送；普通回合结束、取消或等待用户不会触发它。它不是通用任务队列。
+从 beta.25 起，续跑请求被接受后等待 10 秒，已保存的需求会直接请求加入原会话队列，不等待原任务完成或 `[QUOTA_RESUME_GOAL_COMPLETE]` 标记。发送前仍检查实时额度；10 秒是最短等待时间，额度不可用时继续等待。未发生续跑时，“保存”仅保存需求。延迟投递期间原任务取消，待发内容会保留为草稿并停止自动投递；需要手动重新保存或发送。
 
-“保存后续任务”保留上述条件；“现在发送 ↑”是用户明确要求发送新指令，会在监控下一次检查、当前会话正常结束且实时额度可用时发送，不要求此前发生额度中断或出现完成标记。主备监控持续检查保存记录，不再依赖当前续跑记录；界面显示具体等待原因。若桌面端占用会话且 CLI 明确拒绝图片入队，会把已保存图片的本地路径随文字交给原会话读取。入队只表示已接收，仍检查后续启动，不重复发送。
+“现在发送 ↑”和“发送已存任务”是用户明确要求发送新指令，会在监控下一次检查、当前会话正常结束且实时额度可用时发送，不要求此前发生额度中断或出现完成标记。主备监控持续检查保存记录；界面显示具体等待原因。若 CLI 明确拒绝图片入队，会把已保存图片的本地路径随文字交给原会话读取。入队只表示已接收，仍检查后续启动，不重复发送。
 
 ## 数据与边界
 
@@ -144,7 +146,7 @@ MIT 许可。这是独立社区项目，非 OpenAI 官方产品。完整英文�
 
 ### 应用内更新（Windows）
 
-主窗口左下角显示版本号，右下角“检查更新”会从 GitHub Releases 下载更新、验证 SHA256 并自动安装。安装成功后打开新版；旧窗口中的草稿仍可继续保存。任务、附件、监控启用/暂停状态保留。macOS 开发预览暂需手动下载。
+主窗口左下角显示版本号，右下角“检查更新”会从 GitHub Releases 下载更新、验证 SHA256 并自动安装。安装成功后打开新版；旧窗口中的草稿仍可继续保存。任务、附件、监控启用/暂停状态保留。macOS 开发预览支持检查新版、查看发布说明并打开下载页，安装仍需手动完成。
 
 ### 额度中断自动输入窗
 

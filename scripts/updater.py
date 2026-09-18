@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import subprocess
@@ -36,6 +37,38 @@ def asset_url(release, name):
     if not asset or asset.get('browser_download_url') != expected:
         raise RuntimeError('GitHub 发布附件缺失或下载地址不匹配。')
     return expected
+
+
+def check_macos_update(current=VERSION, machine=None):
+    """Read release metadata only; macOS installation stays an explicit download."""
+    if not version(current):raise ValueError('当前版本号无效。')
+    architecture=machine or platform.machine()
+    asset=f'CodexQuotaResume-macOS-{architecture}-preview.zip'
+    fallback=False
+    try:
+        with fetch(f'https://api.github.com/repos/{REPO}/releases?per_page=100') as response:
+            releases=json.load(response)
+    except urllib.error.HTTPError as error:
+        if error.code not in (403,429):raise
+        with fetch(f'https://github.com/{REPO}/releases/latest?check={int(time.time())}') as response:
+            url=response.geturl()
+        prefix=f'https://github.com/{REPO}/releases/tag/'
+        tag=urllib.parse.unquote(url[len(prefix):]) if url.startswith(prefix) else ''
+        if not version(tag):raise RuntimeError('无法确认 GitHub 最新版本，请稍后重试。')
+        releases=[{'tag_name':tag,'assets':[]}]
+        fallback=True
+    candidates=[r for r in releases if not r.get('draft') and version(r.get('tag_name',''))
+                and version(r['tag_name'])>version(current)]
+    if not candidates:
+        return {'macosUpdate':True,'available':False,'version':current,'limited':fallback}
+    release=max(candidates,key=lambda r:version(r['tag_name']))
+    tag=release['tag_name']
+    download=None
+    if any(a.get('name')==asset for a in release.get('assets',[])):
+        download=asset_url(release,asset)
+    return {'macosUpdate':True,'available':True,'version':tag,'limited':fallback,
+            'releaseUrl':f'https://github.com/{REPO}/releases/tag/{tag}',
+            'downloadUrl':download,'notes':release.get('body') or ''}
 
 
 def activate(executable, run_command):

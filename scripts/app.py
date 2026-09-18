@@ -1,4 +1,4 @@
-"""Windows desktop entry point; frozen builds include Python, Tk and Pillow."""
+"""Desktop entry point; frozen builds include Python, Tk and Pillow."""
 import argparse
 import ctypes
 import json
@@ -20,8 +20,12 @@ from PIL import Image, ImageDraw, ImageTk
 import quota_watcher as w
 import updater
 import plan_dialog  # Load the composer once with the application.
-from tray import TrayIcon
+if sys.platform == 'darwin':
+    from tray_macos import TrayIcon
+else:
+    from tray import TrayIcon
 from window_ui import rounded_window, bind_drag, window_controls, RoundedButton, TaskPicker, window_handle, place_beside
+from window_ui import FONT_FAMILY
 
 
 TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
@@ -30,7 +34,7 @@ TASK_NAMES=('Codex Quota Resume Watcher','Codex Quota Resume Backup')
 def run_command(command):
     result = subprocess.run(command,
                             capture_output=True,text=True,encoding='utf-8',errors='replace',
-                            creationflags=subprocess.CREATE_NO_WINDOW)
+                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
     return result.stdout
@@ -58,12 +62,18 @@ def task_xml(executable, minutes, args):
 
 
 def pause():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.pause(w)
     for name in TASK_NAMES:run_command(['schtasks.exe','/Change','/TN',name,'/DISABLE'])
     (w.APP_DIR/'paused.flag').touch()
     return '已暂停后续调度；正在执行的任务不受影响。'
 
 
 def monitor_indicator():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.monitor_indicator(w)
     try:
         command="$ErrorActionPreference='Stop';$s=New-Object -ComObject Schedule.Service;$s.Connect();"
         command+="@('Codex Quota Resume Watcher','Codex Quota Resume Backup') | ForEach-Object {$s.GetFolder('\\').GetTask($_).Enabled} | ConvertTo-Json -Compress"
@@ -78,6 +88,9 @@ def monitor_indicator():
 
 
 def install():
+    if sys.platform == 'darwin':
+        import macos
+        return macos.install(w)
     if not getattr(sys,'frozen',False):
         raise RuntimeError('请使用打包后的 EXE 启用后台监控，源码用户运行 install_windows.ps1。')
     w.codex_status.available(w.find_codex())
@@ -104,7 +117,7 @@ def install():
 
 
 def show():
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    if os.name == 'nt':ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root=tk.Tk()
     root.title('Codex Quota Resume')
     open_plans={}
@@ -118,18 +131,18 @@ def show():
     root.protocol('WM_DELETE_WINDOW',close_main)
     frame=rounded_window(root,430,535)
     footer=tk.Frame(frame,bg='#181818');footer.pack(side='bottom',fill='x',pady=(8,0))
-    tk.Label(footer,text='v'+updater.VERSION,bg='#181818',fg='#999999',font=('Microsoft YaHei UI',9)).pack(side='left')
+    tk.Label(footer,text='v'+updater.VERSION,bg='#181818',fg='#999999',font=(FONT_FAMILY,9)).pack(side='left')
     style=ttk.Style(root); style.theme_use('clam')
     style.configure('TScrollbar',background='#383838',troughcolor='#242424',
                     bordercolor='#242424',arrowcolor='#aaaaaa',lightcolor='#383838',darkcolor='#383838')
     style.map('TScrollbar',background=[('active','#494949')])
 
-    font=('Microsoft YaHei UI',11)
+    font=(FONT_FAMILY,11)
     def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=('Microsoft YaHei UI',size),anchor='w',justify='left',wraplength=374)
+        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
         item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
     top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=('Microsoft YaHei UI',16))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=(FONT_FAMILY,16))
     title.pack(side='left')
     window_controls(root,top,font,on_close=close_main,on_minimize=root.withdraw)
     monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
@@ -156,9 +169,10 @@ def show():
         threading.Thread(target=work,daemon=True).start()
     def check_update():
         if busy[0]:return
-        update_button.configure(text='更新中…')
-        background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
-    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=('Microsoft YaHei UI',9),padx=10,pady=5)
+        update_button.configure(text='检查中…')
+        if sys.platform=='darwin':background(updater.check_macos_update)
+        else:background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
+    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5)
     update_button.pack(side='right')
     github_path=Path(__file__).with_name('github-mark.png')
     if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
@@ -171,11 +185,11 @@ def show():
     github_button.image=github_icon
     github_button.pack(side='right',padx=(0,12))
     def button(parent,text,command,blue=False):
-        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=('Microsoft YaHei UI',10),padx=10)
+        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=(FONT_FAMILY,10),padx=10)
         b.pack(side='left',padx=(0,6));return b
     enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
-    button(actions,'打开运行记录',lambda:os.startfile(w.APP_DIR))
+    button(actions,'打开运行记录',lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]) if sys.platform=='darwin' else os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
     select=TaskPicker(frame,font=font);select.pack(fill='x',pady=(0,12))
     def refresh_pending(blink=False):
@@ -184,7 +198,7 @@ def show():
         if 0<=index<len(threads):
             try:
                 plan=json.loads(w.plan_path(threads[index]['id']).read_text(encoding='utf-8'))
-                pending=plan.get('status') in ('saved','sending','send-failed')
+                pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
             except (OSError,ValueError):pass
         select.set_pending(pending,blink=blink)
     def saved_feedback(thread):
@@ -215,7 +229,7 @@ def show():
         if thread in open_plans:
             dialog=open_plans[thread]
             place_beside(dialog,root)
-            ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
+            if os.name == 'nt':ctypes.windll.user32.ShowWindow(window_handle(dialog),9)
             dialog.deiconify();place_beside(dialog,root);dialog.lift();dialog.focus_force()
             return
         task_name=(threads[index].get('name') or threads[index].get('preview') or '当前任务').replace('\n',' ')
@@ -246,6 +260,8 @@ def show():
            'followup-waiting-idle':'已保存，等待原任务结束',
            'followup-waiting-quota':'已保存，等待额度可用',
            'followup-queued':'已交给 Codex，等待后续任务开始',
+           'followup-cancelled':'原任务已取消，后续需求保留为草稿，等待手动确认',
+           'paused':'监控已暂停',
            'followup-waiting-evidence':'已保存，暂时无法读取原任务记录',
            'followup-send-failed':'后续任务发送失败，请查看记录',
            'followup-unconfirmed':'发送结果待确认，请勿重复发送',
@@ -278,6 +294,23 @@ def show():
                                         bg='#21854d' if enabled else '#2d6acb')
             elif kind=='update-progress':
                 note.configure(text=value)
+            elif isinstance(value,dict) and value.get('macosUpdate'):
+                busy[0]=False
+                update_button.configure(text='检查更新')
+                if value['available']:
+                    note.configure(text='发现新版 '+value['version']+'，可从发布页下载。')
+                    availability=('包含当前 Mac 架构的下载包。' if value.get('downloadUrl') else
+                                  '尚未确认当前 Mac 架构的附件，请在发布页查看。')
+                    notes=value.get('notes','').strip()
+                    if len(notes)>600:notes=notes[:600]+'…'
+                    message='发现 '+value['version']+'\n'+availability
+                    if notes:message+='\n\n'+notes
+                    message+='\n\n打开 GitHub 下载页？'
+                    if messagebox.askyesno('发现新版本',message,parent=root):
+                        webbrowser.open(value['releaseUrl'])
+                else:
+                    note.configure(text=('GitHub API 限流；未发现更新的正式版，预览版请查看发布页。'
+                                         if value.get('limited') else '未发现更新的发布版本。'))
             elif isinstance(value,dict) and 'updated' in value:
                 busy[0]=False
                 update_button.configure(text='检查更新')
@@ -327,9 +360,23 @@ def main():
     parser.add_argument('--plan-key')
     parser.add_argument('--self-test',action='store_true')
     parser.add_argument('--install',action='store_true')
+    parser.add_argument('--doctor',action='store_true')
     parser.add_argument('--apply-update',action='store_true')
     args=parser.parse_args()
-    if args.apply_update:
+    if args.doctor:
+        try:
+            if sys.platform != 'darwin':
+                result={'ok':False,'errors':{'platform':{'message':'--doctor requires macOS'}}}
+            else:
+                import macos
+                result=macos.doctor(w)
+        except Exception as error:
+            result={'ok':False,'errors':{'doctor':{'message':'Diagnostics could not be completed.',
+                                               'type':type(error).__name__}}}
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        if not result['ok']:raise SystemExit(1)
+    elif args.apply_update:
+        if sys.platform != 'win32':raise RuntimeError('Automatic installation currently requires Windows')
         w.self_test()
         updater.activate(sys.executable,run_command)
     elif args.install:

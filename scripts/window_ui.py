@@ -1,16 +1,19 @@
 """Shared rounded desktop window and draggable non-input surfaces."""
 import tkinter as tk
 import ctypes
+import sys
 from ctypes import wintypes
 from pathlib import Path
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
 
+FONT_FAMILY = 'PingFang SC' if sys.platform == 'darwin' else 'Microsoft YaHei UI'
+
 
 class RoundedButton(tk.Button):
     """Keep native button keyboard/command behavior with a rounded image surface."""
     def __init__(self, parent, *, text='', command=None, bg='#2b2b2b', fg='#eeeeee',
-                 font=('Microsoft YaHei UI', 11), padx=14, pady=10, image=None, width_px=None):
+                 font=(FONT_FAMILY, 11), padx=14, pady=10, image=None, width_px=None):
         self.fixed_width=width_px
         self.fill=bg
         self.padding=(padx,pady)
@@ -18,6 +21,7 @@ class RoundedButton(tk.Button):
         super().__init__(parent,text=text,command=command,font=font,fg=fg,
                          bg=parent.cget('bg'),activebackground=parent.cget('bg'),
                          activeforeground=fg,relief='flat',bd=0,highlightthickness=0,
+                         highlightbackground=parent.cget('bg'),
                          padx=0,pady=0,cursor='hand2',compound='center',takefocus=True)
         self.bind('<ButtonPress-1>',lambda e:self.winfo_toplevel().focus_set())
         self.bind('<Enter>',lambda e:self.redraw(True))
@@ -185,6 +189,22 @@ def group_positions(main,child_size,work,count,gap=6):
 
 def place_beside(dialog,parent):
     """Arrange all visible composers; dialog=None only checks room for a new one."""
+    if sys.platform == 'darwin':
+        from macos import work_area
+        parent.update_idletasks()
+        x,y=parent.winfo_x(),parent.winfo_y()
+        width,height=parent.window_size
+        dialogs=[item for item in parent.winfo_children() if getattr(item,'is_task_composer',False)
+                 and (item is dialog or item.state()=='normal')]
+        if dialog not in dialogs:dialogs.append(dialog)
+        size=dialog.window_size if dialog is not None else (430,535)
+        main,children=group_positions((x,y,width,height),size,
+                                       work_area(x+width//2,y+height//2),len(dialogs))
+        if dialog is None:return
+        parent.geometry(f'+{main[0]}+{main[1]}')
+        for item,position in zip(dialogs,children):
+            item.geometry(f'+{position[0]}+{position[1]}')
+        return
     class MonitorInfo(ctypes.Structure):
         _fields_=[('cbSize',wintypes.DWORD),('rcMonitor',wintypes.RECT),
                   ('rcWork',wintypes.RECT),('dwFlags',wintypes.DWORD)]
@@ -211,6 +231,15 @@ def place_beside(dialog,parent):
 
 
 def minimize(root):
+    if sys.platform == 'darwin':
+        root.overrideredirect(False)
+        def mapped(event):
+            if event.widget == root and root.state() == 'normal':
+                root.overrideredirect(True)
+                root.unbind('<Map>',binding)
+        binding=root.bind('<Map>',mapped,add='+')
+        root.iconify()
+        return
     configure_taskbar(root)
     ctypes.windll.user32.ShowWindow(window_handle(root),6)
 
@@ -221,6 +250,7 @@ def window_controls(root,parent,font,on_close=None,on_minimize=None):
 
 
 def configure_taskbar(root):
+    if sys.platform == 'darwin':return
     user32=ctypes.windll.user32
     hwnd=window_handle(root)
     style=user32.GetWindowLongW(hwnd,-20)
@@ -236,6 +266,9 @@ def bind_drag(root, *widgets):
     def start(event):
         offset[:]=[event.x_root-root.winfo_x(),event.y_root-root.winfo_y()]
     def move(event):
+        if sys.platform == 'darwin':
+            root.geometry(f'+{event.x_root-offset[0]}+{event.y_root-offset[1]}')
+            return
         ctypes.windll.user32.SetWindowPos(window_handle(root),None,event.x_root-offset[0],event.y_root-offset[1],0,0,0x15)
     for widget in widgets:
         widget.bind('<ButtonPress-1>',start)
@@ -244,21 +277,26 @@ def bind_drag(root, *widgets):
 
 def rounded_window(root,width,height):
     root.window_size=(width,height)
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
+    if sys.platform != 'darwin':ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
     root.overrideredirect(True)
-    root.configure(bg='#010203')
-    root.wm_attributes('-transparentcolor','#010203')
+    background='systemTransparent' if sys.platform == 'darwin' else '#010203'
+    root.configure(bg=background)
+    if sys.platform == 'darwin':root.wm_attributes('-transparent',True)
+    else:root.wm_attributes('-transparentcolor','#010203')
     root.geometry(f'{width}x{height}+{max(0,(root.winfo_screenwidth()-width)//2)}+{max(0,(root.winfo_screenheight()-height)//2)}')
-    canvas=tk.Canvas(root,bg='#010203',highlightthickness=0)
+    canvas=tk.Canvas(root,bg=background,highlightthickness=0)
     canvas.pack(fill='both',expand=True)
     radius=48
     canvas.create_polygon(radius,1,width-radius,1,width-1,1,width-1,radius,
                           width-1,height-radius,width-1,height-1,width-radius,height-1,
                           radius,height-1,1,height-1,1,height-radius,1,radius,1,1,
                           smooth=True,fill='#181818',outline='#383838',width=1)
-    body=tk.Frame(canvas,bg='#181818')
-    canvas.create_window(28,22,anchor='nw',width=width-56,height=height-44,window=body)
+    body=tk.Frame(root,bg='#181818')
+    body.place(x=28,y=22,width=width-56,height=height-44)
     bind_drag(root,canvas,body)
     root.bind('<Map>',lambda event:root.after_idle(lambda:configure_taskbar(root)) if event.widget==root else None,add='+')
     root.after(0,lambda:configure_taskbar(root))
+    if sys.platform == 'darwin':
+        from macos import repaint_on_layout
+        repaint_on_layout(root)
     return body

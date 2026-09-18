@@ -11,7 +11,7 @@ from contextlib import contextmanager
 def connection(executable):
     process = subprocess.Popen([executable, 'app-server', '--stdio'], stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-                               encoding='utf-8', creationflags=subprocess.CREATE_NO_WINDOW)
+                               encoding='utf-8', creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     replies = queue.Queue()
     def read():
         try:

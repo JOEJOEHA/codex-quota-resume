@@ -1,0 +1,74 @@
+# macOS 移植进度（2026-09-16）
+
+## 本地 Mac 续开发（2026-09-17） / Local Mac continuation
+
+已重新获取并同步 `macos-port` 的 `6f48493`（beta.25），保留 ChatGPT.app CLI 查找、结构化 doctor、非同步构建目录及签名修复。M2 / macOS 26.3 上的共享回归、8 项 doctor 测试、隔离原生 UI/附件功能测试、打包签名与自检通过。截图像素检查显式跳过；真实额度周期和持久 LaunchAgent 验收仍未完成。详见 [本地更新与验证记录](docs/macos-local-validation.md)。
+
+Synced beta.25 while retaining local macOS fixes. Offline regressions, native functional UI/file checks, signing and the frozen self-test passed; screen pixels and real quota/LaunchAgent acceptance remain incomplete. See the linked validation record. The historical upstream notes below are retained for context.
+
+当前阶段：开发预览已构建，尚未完成目标 Mac 和真实额度恢复验收。不得输出整体完成标记。
+
+## 源码与交付
+
+- 基线：Windows v3.0.0-beta.15 / `4edb3cd`。
+- 分支：`macos-port`；草稿 PR：https://github.com/JOEJOEHA/codex-quota-resume/pull/1 。未合并、未覆盖 Windows 发布版。
+- 本轮已验证的程序源码提交：`eae49ce`。
+- 成功的 macOS CI：https://github.com/JOEJOEHA/codex-quota-resume/actions/runs/35065360614 。包含 arm64 / x86_64 `.app` 预览 ZIP、SHA256、界面截图。
+- 预览包为开发用 ad-hoc 签名，没有 Developer ID、公证或正式 DMG。
+
+## 已实现与验证
+
+- 复用监控业务逻辑，保留明确额度错误、实时额度、完成标记、原会话续跑、写入者冲突回退和发送去重。
+- macOS 用户路径、CLI 查找与只读 doctor、主备 LaunchAgent（60 / 300 秒）、共享 flock、暂停标记。
+- 安装更新共用监控锁，避免覆盖发送记录；不卸载或终止正在执行的任务。
+- 原生菜单栏通过事件队列交给 Tk 主循环处理，关闭/恢复窗口，退出时保留草稿。
+- macOS 字体、窗口摆放、截图工具、Finder 文件/图片粘贴、Command 快捷键、展开编辑器。
+- Aqua 缩略图改为 Canvas 直接绘制；窗口布局后标记 Cocoa backing view 重绘。原生截图检查验证缩略图及主窗口文字实际显示，并允许小范围显示色差。
+- Windows 本地界面/附件/草稿回归及 CI 通过。
+- macOS 14 arm64、macOS 15 Intel 的业务回归、跨进程锁、临时 LaunchAgent 后台启动、原生窗口测试、PyInstaller 构建、签名检查、打包后自检通过。
+
+## 仍需外部条件
+
+用户已确认没有 Mac；后续由朋友在自己的 Mac 上通过 Fork / PR 继续开发和验收。完整中英文交接 prompt 见 [macOS Development Handoff / macOS 开发交接](docs/macos-handoff.md)，贡献身份与流程见 [Contributing / 贡献指南](CONTRIBUTING.md)。
+
+The owner has no Mac. A contributor will continue on their own Mac through a fork and PR. Native CI builds exist, but signed-in target-device and real quota-recovery acceptance remain pending. See the bilingual handoff above; do not report full completion.
+
+下一步在已登录 Codex 的目标 Mac 执行 `--doctor`，确认 CLI 路径、App Server 实验接口及 queue 支持；再验收真实菜单点击、截图权限、Retina/多显示器、重启后后台调度，最后完成“明确额度中断 → 额度恢复 → 原任务验收 → 后续任务发送”的真实完整周期。CI 使用模拟 Codex 响应，不能替代这个验收。
+
+详细构建和测试说明见 `docs/macos.md`。未改变当前 Windows 监控、用户任务、附件或打开的草稿。
+
+## Windows 应用内更新（2026-09-17） / Windows in-app updates
+
+- Windows 主分支 `49f9949`，发布 [v3.0.0-beta.18](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.18)。左下版本号、右下检查更新；GitHub 下载、SHA256 校验、分版本安装与新界面启动。
+- 实测发现 GitHub API 403 限流和公开 latest 地址缓存旧标签；已增加公开页面备用检查并刷新缓存。
+- 自动更新从 GitHub 实际下载 beta.18 并安装成功。桌面快捷方式、主备监控均指向 `%LOCALAPPDATA%\CodexQuotaWatcher\versions\v3.0.0-beta.18\CodexQuotaResume.exe`；原监控 enabled 状态不变。未删除任务、附件或强制结束草稿窗口。
+- 已安装 EXE 窗口渲染检查：430×535，底部版本号与更新按钮均可见。更新逻辑、校验失败阻止执行、版本排序、限流备用路径、输入窗口及监控业务回归通过；Windows CI 35128368435 成功。
+- Upgrade download/install verified against the real GitHub release with a simulated older client version. The installed EXE, shortcut and both monitor targets were checked; open drafts and monitor state are preserved.
+- macOS 分支同步 Windows 更新代码并保留平台限制；macOS 预览暂不支持自动安装。前述目标 Mac 与真实额度恢复验收仍待朋友完成。
+
+## 2026-09-17 最新用户要求 / Latest request
+
+- 已恢复明确额度中断时自动打开任务输入窗：GUI 约 5 秒检测，同进程复用草稿；独占领取文件保证同一中断只弹一次。GUI 未运行时在下次后台检查打开。零额度快照、网络错误及正常完成不触发。
+- Windows beta.24 已安装；源码 main `6386c95`，Windows CI `35163568163` 通过。
+- macOS 分支已同步主分支更新；菜单栏采用第三版奶油色小猫，构建包含图片资源。候选构建提交 `2a38b21`，CI `35163669146`。
+- Release [v3.0.0-beta.24](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.24) 已公开并设为 Latest：Windows EXE、macOS arm64 / x86_64 ZIP 与 SHA256SUMS.txt 齐全。Mac CI `35163669146` 两种架构成功；下载后的 ZIP 校验值已核对。
+- macOS 仍为开发预览：应用内自动安装尚未移植，使用手动下载替换；目标 Mac 登录及真实额度恢复周期验收仍待完成，不宣称全功能验收。
+
+The latest Windows changes are synchronized to macos-port. macOS packages remain developer previews; in-app automatic installation and signed-in target-device acceptance remain pending. Windows auto-update and quota-popup behavior were locally tested.
+
+## 续跑后 10 秒发送 / Ten-second follow-up (beta.25)
+
+用户最新要求覆盖原先的完成标记等待规则：当存在已保存需求，续跑请求确认接受后等待 10 秒，直接请求加入原会话队列，即使原任务仍在运行也不等待验收标记。发送前仍检查实时额度。已发送、已入队及发送结果不明确的需求不自动重发。
+
+- Windows main `57840da`，已安装 beta.25，CI `35164402279` 成功。
+- macOS 同步提交 `f72015f`，两个架构构建中，CI `35164446739`。
+- 新测试覆盖：正常入队续跑、长时间 exec resume 未返回时发送、10 秒下限、无额度等待、队列去重、持久化时间；原监控与窗口回归通过。
+- Release `v3.0.0-beta.25` 草稿已创建，等待 Mac 构建附件。真实额度完整周期与 Mac 实机验收仍未宣称完成。
+
+
+Release verification: v3.0.0-beta.25 is now public and Latest. Windows EXE, macOS arm64 and x86_64 ZIPs, and SHA256SUMS.txt are uploaded. Both macOS jobs in CI 35164446739 passed; downloaded ZIP hashes match CI checksums. This supersedes the earlier draft/building status above.
+
+
+## 2026-09-17 local macOS beta.36 update
+
+Fast-forwarded macos/device-validation to upstream macos-port 7365671, preserving the local CLI discovery, doctor, build signing and native test fixes. Added persistent cancellation of delayed follow-ups (including an abort followed by another turn between polls), a pause recheck before delivery, restored Text mouse caret/selection bindings, persistent composer task/rule labels and read-only Mac release checks with a download-page action. New cancellation, updater and native UI regression tests are included in macOS CI. See docs/macos-local-validation.md for measured validation and limits; this is an unpublished local build.

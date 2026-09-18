@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 from types import SimpleNamespace
 spec=importlib.util.spec_from_file_location('w',Path(__file__).with_name('quota_watcher.py')); w=importlib.util.module_from_spec(spec); spec.loader.exec_module(w)
+patch.object(w,'find_codex',return_value='codex').start()
 patch.object(w.codex_status,'ready',return_value='available').start()
 patch.object(w.codex_status,'available',return_value=True).start()
 with tempfile.TemporaryDirectory() as d:
