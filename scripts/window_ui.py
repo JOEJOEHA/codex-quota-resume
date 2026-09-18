@@ -101,6 +101,13 @@ class TaskPicker(tk.Frame):
         self.focus_timer=None
         self.pending=False
         self.bind('<Destroy>',self.cancel_flag,add='+')
+        self.native_menu=None
+        if sys.platform=='darwin':
+            from macos_task_menu import NativeTaskMenu
+            self.native_menu=NativeTaskMenu()
+            self.winfo_toplevel().bind('<Unmap>',self.parent_hidden,add='+')
+            self.bind('<Destroy>',lambda e:self.native_menu.dismiss() if e.widget==self else None,add='+')
+            return
         # A separate native popup is removed by the window compositor on hide.
         # Embedded Canvas windows can leave stale Aqua backing-store pixels.
         self.panel=tk.Toplevel(self)
@@ -139,11 +146,17 @@ class TaskPicker(tk.Frame):
         if width==self.button.fixed_width:return
         self.button.fixed_width=width
         self.current(self.index)
-        if self.panel.winfo_ismapped():self.hide(restore_focus=False)
+        if self.native_menu:
+            self.native_menu.dismiss()
+        elif self.panel.winfo_ismapped():self.hide(restore_focus=False)
 
     def apply_appearance(self,appearance):
         appearance.bind(self,bg='card')
         appearance.bind(self.button,bg='field',fg='text')
+        if self.native_menu:
+            def sync_theme():self.native_menu.theme=appearance.name
+            appearance.changed(sync_theme);sync_theme()
+            return
         appearance.bind(self.popup_interior,bg='card')
         appearance.bind(self.listing,bg='card',fg='text',selectbackground='blue',selectforeground='white')
         def repaint():
@@ -195,8 +208,9 @@ class TaskPicker(tk.Frame):
 
     def set_values(self,values):
         self.values=list(values)
-        self.listing.delete(0,'end')
-        for value in self.values:self.listing.insert('end',value)
+        if not self.native_menu:
+            self.listing.delete(0,'end')
+            for value in self.values:self.listing.insert('end',value)
         self.current(0 if self.values else -1)
 
     def current(self,index=None):
@@ -208,6 +222,12 @@ class TaskPicker(tk.Frame):
         self.button.configure(text=text+'  ▾')
 
     def toggle(self):
+        if self.native_menu:
+            self.update_idletasks()
+            chosen=self.native_menu.present(self.values,self.index,self.winfo_rootx(),
+                                            self.winfo_rooty()+self.winfo_height()+4,self.button.winfo_width())
+            if chosen is not None:self.current(chosen)
+            return
         if self.panel.winfo_ismapped():self.hide();return
         self.update_idletasks()
         x=self.winfo_rootx()
@@ -225,6 +245,10 @@ class TaskPicker(tk.Frame):
         self.listing.focus_set()
 
     def hide(self,keyboard=False,restore_focus=True):
+        if self.native_menu:
+            self.native_menu.dismiss()
+            if restore_focus:(self.button if keyboard else self.winfo_toplevel()).focus_set()
+            return
         if not self.panel.winfo_exists():return
         self.panel.withdraw()
         if restore_focus:(self.button if keyboard else self.winfo_toplevel()).focus_set()
@@ -236,6 +260,8 @@ class TaskPicker(tk.Frame):
         return 'break'
 
     def dismiss(self,event):
+        if self.native_menu:
+            self.native_menu.dismiss();return
         widget=event.widget
         while widget is not None:
             if widget in (self,self.panel):return
@@ -286,9 +312,17 @@ def place_beside(dialog,parent):
         dialogs=[item for item in parent.winfo_children() if getattr(item,'is_task_composer',False)
                  and (item is dialog or item.state()=='normal')]
         if dialog not in dialogs:dialogs.append(dialog)
-        size=(dialog.winfo_width(),dialog.winfo_height()) if dialog is not None else (480,650)
-        main,children=group_positions((x,y,width,height),size,
-                                       work_area(x+width//2,y+height//2),len(dialogs))
+        size=(max(dialog.winfo_width(),dialog.window_size[0]),max(dialog.winfo_height(),dialog.window_size[1])) if dialog is not None else (480,650)
+        work=work_area(x+width//2,y+height//2)
+        try:main,children=group_positions((x,y,width,height),size,work,len(dialogs))
+        except ValueError:
+            # Native windows may overlap normally when side-by-side cannot fit.
+            if dialog is not None:
+                left,top,right,bottom=work
+                cx=max(left,min(x+24,right-size[0]))
+                cy=max(top,min(y+24,bottom-size[1]-32))
+                dialog.geometry(f'+{cx}+{cy}')
+            return
         if dialog is None:return
         parent.geometry(f'+{main[0]}+{main[1]}')
         for item,position in zip(dialogs,children):

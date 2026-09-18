@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory() as folder:
   caption=next(w for w in walk(dialog) if w.winfo_name()=='task_caption')
   assert caption.winfo_ismapped() and caption.cget('text')=='Placeholder test'
  assert 'Placeholder test' in dialog.title()
- assert any(isinstance(w,tk.Label) and '保存：续跑后 10 秒投递' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog)) == (sys.platform!='win32')
+ assert any(isinstance(w,tk.Label) and ('保存：续跑后 10 秒投递' in w.cget('text') or '保存后等待自动发送' in w.cget('text')) and w.winfo_ismapped() for w in walk(dialog)) == (sys.platform!='win32')
  editor.focus_force();editor.mark_set('insert','end-1c');root.update()
  before=editor.index('insert')
  x,y,width,height=editor.bbox('1.1')
@@ -60,7 +60,7 @@ with tempfile.TemporaryDirectory() as folder:
  assert actions[0].winfo_width()==actions[1].winfo_width()
  if sys.platform=='win32':assert 'Placeholder test' in hint.cget('text')
  assert all(w.winfo_rooty()>=editor.winfo_rooty()+editor.winfo_height() for w in actions)
- expand=next(w for w in buttons if w.cget('text')=='\u2197')
+ expand=next(w for w in buttons if w.cget('text') in ('\u2197','↗ 展开'))
  if sys.platform=='win32':assert add.winfo_height()==expand.winfo_height()
  if sys.platform=='win32':assert expand.winfo_rootx()+expand.winfo_width()<actions[0].winfo_rootx()
  print('COMPOSER_LAYOUT_OK',height,dialog.winfo_height())

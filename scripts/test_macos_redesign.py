@@ -41,14 +41,16 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     os.environ['QUOTA_RESUME_THEME']='dark'
     ui.appearance.apply('dark');root.update()
     assert ui.frame.cget('bg')==PALETTES['dark']['window']
-    assert ui.select.listing.cget('bg')==PALETTES['dark']['card']
-    ui.select.toggle();root.update();ui.select.hide();root.update()
-    assert not ui.select.panel.winfo_viewable()
+    assert ui.select.native_menu.theme=='dark'
+    with patch.object(ui.select.native_menu,'present',return_value=1):ui.select.toggle()
+    assert ui.select.current()==1
+    ui.select.hide()
+    assert not ui.select.native_menu.active
     root.geometry('620x760');root.update()
     assert ui.select.button.winfo_width()<=ui.select.winfo_width()
     for w in (ui.compose,ui.send,ui.update):
         assert w.winfo_viewable() and w.winfo_rooty()+w.winfo_height()<=root.winfo_rooty()+root.winfo_height()
-    root.geometry('480x650');root.update()
+    root.geometry(str(root.winfo_screenwidth()-40)+'x650');root.update()
     path=Path(folder)/'plan.json'
     dialog=plan_dialog.show('test-thread',path,lambda p,v:p.write_text(json.dumps(v)),parent=root,task_name='Test task')
     root.update();assert not dialog.overrideredirect()

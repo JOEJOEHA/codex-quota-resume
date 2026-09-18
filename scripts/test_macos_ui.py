@@ -60,7 +60,7 @@ def mainloop(root):
             assert dialog.winfo_viewable() and not dialog.overrideredirect()
             button(root, '+ 添加后续任务').invoke()
             assert len([x for x in root.winfo_children() if isinstance(x, tk.Toplevel)]) == 1
-            button(dialog, '↗').invoke()
+            button(dialog, '↗ 展开').invoke()
             expanded = next(x for x in dialog.winfo_children() if isinstance(x, tk.Toplevel))
             large = next(x for x in walk(expanded) if isinstance(x, tk.Text))
             large.insert('end', ' + 展开编辑')

@@ -74,7 +74,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             while text and caption_font.measure(text+'…')>event.width-4:text=text[:-1]
             task_label.configure(text=text+('…' if text!=caption else ''))
         task_label.bind('<Configure>',fit_caption)
-        rules=label(body,'保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
+        rules=label(body,'保存后等待自动发送 · 发送时会检查任务和额度' if mac_ui else '保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
         rules.pack(fill='x',pady=(2,0))
     if old.get('status')=='cancelled':
         label(body,'原任务已取消，草稿保留；重新保存或发送后才会投递。','#e7b66a',9).pack(fill='x')
@@ -276,7 +276,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         large.focus_set()
     attachment_toolbar=tk.Frame(body,bg='#181818') if mac_ui else None
     expand_host=tk.Frame(attachment_toolbar if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b')
-    expand_button=RoundedButton(expand_host,text='↗',command=expand_editor,font=font,padx=5,pady=1)
+    expand_button=RoundedButton(expand_host,text='↗ 展开' if mac_ui else '↗',command=expand_editor,font=font,padx=12 if mac_ui else 5,pady=6 if mac_ui else 1)
     expand_button.pack()
     def save(event=None, send_now=False):
         collapse_editor()
@@ -330,8 +330,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
     add_host=tk.Frame(attachment_toolbar if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b',width=160 if mac_ui else expand_button.winfo_reqwidth(),height=40 if mac_ui else expand_button.winfo_reqheight())
-    add_host.pack_propagate(False)
-    add_button=RoundedButton(add_host,text='+ 添加附件' if mac_ui else '+',command=choose_attachments if mac_ui else toggle_menu,font=font,padx=5,pady=1)
+    if not mac_ui:add_host.pack_propagate(False)
+    add_button=RoundedButton(add_host,text='+ 添加附件' if mac_ui else '+',command=choose_attachments if mac_ui else toggle_menu,font=font,padx=12 if mac_ui else 5,pady=6 if mac_ui else 1)
     add_button.pack(fill='both',expand=True)
     def dismiss_menu(event):
         widget=event.widget
