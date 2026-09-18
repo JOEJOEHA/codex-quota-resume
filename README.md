@@ -1,7 +1,7 @@
 # Codex Quota Resume · Codex 额度恢复自动续跑
 
 [简体中文](README.md) | [English](README.en.md)
-![Codex 自动续跑软件界面](assets/software-windows-transparent.png)
+![macOS v3.1.0beta 浅色界面（模拟任务）](assets/software-macos-light.png)
 **Windows Beta / macOS Developer Preview（开发预览）**。macOS 移植和监控配置兼容性修复已合入 `main`，macOS 后续开发在 `MacOS-version` 分支进行。macOS 尚未完成目标设备及真实额度恢复验收。
 
 [桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](docs/macos.md)
@@ -12,7 +12,7 @@
 
 ## macOS Developer Preview · v3.1.0beta
 
-macOS 开发请使用 `MacOS-version` 分支。本版本仍为 Developer Preview，尚未完成真实额度恢复与全部目标设备验收。
+macOS 开发请使用 `MacOS-version` 分支。本版本仍为 Developer Preview，尚未完成真实额度恢复与全部目标设备验收。构建包见 [MacOS-version Actions](https://github.com/joejoeha/codex-quota-resume/actions/workflows/macos.yml?query=branch%3AMacOS-version)，修改与验证清单见 [v3.1.0beta 验证记录](docs/macos-v3.1.0beta-validation.md)。
 
 - 重构 macOS UI / UX，主窗口和后续任务编辑器统一支持系统 Light / Dark 外观，打开期间自动跟随主题变化。
 - 状态胶囊区分监控、额度等待、准备续跑、正在续跑、暂停和异常，弱化最近检查等辅助信息。
@@ -34,7 +34,7 @@ macOS 开发请使用 `MacOS-version` 分支。本版本仍为 Developer Preview
 
 ## 下载本地软件（推荐）
 
-[下载 Windows EXE（v3.0.0-beta.38）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.38/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [macOS 预览版下载](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
+[下载 Windows EXE（v3.0.0-beta.38）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.38/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [较早 macOS 预览发布包](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
 
 beta.38 仅更新 Windows：输入窗口顶部显示对应任务标题，长标题自动省略，移除标题下方重复任务名与保存／发送说明；展开编辑窗口也显示任务标题。
 
