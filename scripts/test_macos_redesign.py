@@ -13,6 +13,7 @@ assert status_presentation('waiting-quota',True)==('● 等待额度恢复','wai
 assert status_presentation('resuming',True)==('● 正在续跑','good')
 assert status_presentation('resume-failed',True)==('! 异常','error')
 assert status_presentation('resuming',True,True)==('Ⅱ 已暂停','neutral')
+assert status_presentation('waiting-quota',False)==('● 尚未启用','neutral')
 
 def walk(widget):
     yield widget

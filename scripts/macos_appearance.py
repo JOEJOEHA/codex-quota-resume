@@ -87,11 +87,11 @@ class Appearance:
 def status_presentation(code,enabled=None,paused=False):
     if paused or code=='paused':return 'Ⅱ 已暂停','neutral'
     if any(word in code for word in ('failed','missing','unconfirmed','error')):return '! 异常','error'
+    if enabled is False:return '● 尚未启用','neutral'
+    if enabled is None:return '● 正在读取状态','neutral'
     if code in ('waiting-quota','followup-waiting-quota'):return '● 等待额度恢复','wait'
     if code in ('resuming','dispatch-active','followup-queued'):return '● 正在续跑','good'
     if code in ('queued-awaiting-start','waiting-start','followup-waiting-delay'):return '● 准备继续任务','wait'
-    if enabled is False:return '● 尚未启用','neutral'
-    if enabled is None:return '● 正在读取状态','neutral'
     return '● 监控中','good'
 
 
