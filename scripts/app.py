@@ -361,6 +361,7 @@ def show():
                 threads[:]=value
                 select.set_values([(x.get('name') or x.get('preview') or x['id']).replace('\n',' ')[:65] for x in value])
                 if threads:select.current(0)
+                refresh_pending()
                 note.configure(text='任务列表已更新。')
             else:
                 busy[0]=False

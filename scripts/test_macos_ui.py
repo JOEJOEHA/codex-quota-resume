@@ -98,6 +98,7 @@ def mainloop(root):
                     assert plan['text'] == '草稿保留 + 展开编辑' and plan['status'] == 'saved'
                     assert len(plan['images']) == 6
                 except Exception as error:
+                    __import__('traceback').print_exc()
                     errors.append(error)
                     root.destroy()
             def paste_image(index=0):
@@ -109,6 +110,7 @@ def mainloop(root):
                     if index<6:root.after(100,lambda:paste_image(index+1))
                     else:root.after(700,finish)
                 except Exception as error:
+                    __import__('traceback').print_exc()
                     errors.append(error)
                     root.destroy()
             # Cocoa minimization/restore is asynchronous; deliver paste events in separate turns.

@@ -12,7 +12,7 @@ picker.set_values(['First task','Second task'])
 root.update();root.focus_force()
 assert body.cget('bg')=='#ffffff'
 if sys.platform=='darwin':
-    from AppKit import NSObject
+    from AppKit import NSObject,NSEventTrackingRunLoopMode
     from Foundation import NSTimer,NSRunLoop,NSRunLoopCommonModes
     class MenuProbe(NSObject):
         def fire_(self,timer):
@@ -30,6 +30,7 @@ if sys.platform=='darwin':
         probe.native=picker.native_menu;probe.selection=selection;probe.capture=capture;probe.errors=[]
         timer=NSTimer.timerWithTimeInterval_target_selector_userInfo_repeats_(.4,probe,'fire:',None,False)
         NSRunLoop.mainRunLoop().addTimer_forMode_(timer,NSRunLoopCommonModes)
+        NSRunLoop.mainRunLoop().addTimer_forMode_(timer,NSEventTrackingRunLoopMode)
         try:picker.toggle()
         finally:timer.invalidate()
         assert not probe.errors,probe.errors
