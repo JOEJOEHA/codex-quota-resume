@@ -1,5 +1,7 @@
 # v3.1.0beta · macOS Developer Preview
 
+第二轮修正与当前安装结果见 [UI QA 记录](macos-v3.1.0beta-ui-qa.md)。以下结果保留第一轮验证历史。
+
 开发分支：`MacOS-version`。本轮不修改 `main`，不发布稳定版。
 
 ## 架构与修改范围
