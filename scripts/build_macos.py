@@ -36,7 +36,9 @@ def main():
     info_path = bundle / 'Contents/Info.plist'
     with info_path.open('rb') as file:
         info = plistlib.load(file)
-    info['CFBundleShortVersionString'] = MACOS_VERSION
+    info['CFBundleShortVersionString'] = MACOS_VERSION[:-4]
+    info['CodexQuotaResumeVersion'] = MACOS_VERSION
+    info['CFBundleGetInfoString'] = 'v' + MACOS_VERSION + ' · macOS Developer Preview'
     info['CFBundleVersion'] = '3.1.0'
     with info_path.open('wb') as file:
         plistlib.dump(info, file)

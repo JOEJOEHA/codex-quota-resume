@@ -19,7 +19,8 @@ class UpdateTests(unittest.TestCase):
             run.assert_not_called();launch.assert_not_called()
             return result
 
-    def test_bata_version(self):
+    def test_beta_version(self):
+        self.assertEqual(u.version('v3.1.0beta'), u.version('3.1.0-beta.0'))
         self.assertEqual(u.version('v3.1.0bata'), u.version('3.1.0-beta.0'))
         self.assertGreater(u.version('3.1.0bata'), u.version('3.0.0-beta.38'))
         self.assertLess(u.version('3.1.0bata'), u.version('3.1.0'))

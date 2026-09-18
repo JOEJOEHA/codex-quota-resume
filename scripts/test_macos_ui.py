@@ -45,10 +45,10 @@ def mainloop(root):
             root.tray.poll()
             root.update()
             assert root.winfo_viewable()
-            button(root, '打开需求输入框').invoke()
+            button(root, '+ 添加后续任务').invoke()
             root.update()
             dialog = next(x for x in root.winfo_children() if isinstance(x, tk.Toplevel))
-            assert dialog.winfo_width() == 430 and dialog.winfo_height() == 535
+            assert dialog.winfo_width() == 480 and dialog.winfo_height() == 650
             assert abs(dialog.winfo_y()-root.winfo_y()) <= 2
             editor = next(x for x in walk(dialog) if isinstance(x, tk.Text))
             editor.insert('1.0', '草稿保留')
@@ -57,8 +57,8 @@ def mainloop(root):
             assert editor.get('1.0','end-1c')=='草稿保留'
             minimize(dialog);root.update()
             dialog.deiconify();root.update()
-            assert dialog.winfo_viewable() and dialog.overrideredirect()
-            button(root, '打开需求输入框').invoke()
+            assert dialog.winfo_viewable() and not dialog.overrideredirect()
+            button(root, '+ 添加后续任务').invoke()
             assert len([x for x in root.winfo_children() if isinstance(x, tk.Toplevel)]) == 1
             button(dialog, '↗').invoke()
             expanded = next(x for x in dialog.winfo_children() if isinstance(x, tk.Toplevel))

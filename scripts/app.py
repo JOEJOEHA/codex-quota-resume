@@ -130,36 +130,42 @@ def show():
         if open_plans:root.withdraw()
         else:root.destroy()
     root.protocol('WM_DELETE_WINDOW',close_main)
-    frame=rounded_window(root,430,535,surface='#ffffff',border='#dfe3e8')
-    footer=tk.Frame(frame,bg='#ffffff');footer.pack(side='bottom',fill='x',pady=(8,0))
-    tk.Label(footer,text='v'+updater.VERSION,bg='#ffffff',fg='#6b7280',font=(FONT_FAMILY,9)).pack(side='left')
-    style=ttk.Style(root); style.theme_use('clam')
-    style.configure('TScrollbar',background='#d1d5db',troughcolor='#f3f4f6',
-                    bordercolor='#f3f4f6',arrowcolor='#5f6368',lightcolor='#d1d5db',darkcolor='#d1d5db')
-    style.map('TScrollbar',background=[('active','#9ca3af')])
+    mac_ui=None
+    if sys.platform=='darwin':
+        from macos_main_ui import build
+        mac_ui=build(root,updater.VERSION,close_main)
+        frame,status,detail,note=mac_ui.frame,mac_ui.status,mac_ui.detail,mac_ui.note
+    else:
+        frame=rounded_window(root,430,535,surface='#ffffff',border='#dfe3e8')
+        footer=tk.Frame(frame,bg='#ffffff');footer.pack(side='bottom',fill='x',pady=(8,0))
+        tk.Label(footer,text='v'+updater.VERSION,bg='#ffffff',fg='#6b7280',font=(FONT_FAMILY,9)).pack(side='left')
+        style=ttk.Style(root); style.theme_use('clam')
+        style.configure('TScrollbar',background='#d1d5db',troughcolor='#f3f4f6',
+                        bordercolor='#f3f4f6',arrowcolor='#5f6368',lightcolor='#d1d5db',darkcolor='#d1d5db')
+        style.map('TScrollbar',background=[('active','#9ca3af')])
 
-    font=(FONT_FAMILY,11)
-    def label(text,color='#202124',size=11):
-        item=tk.Label(frame,text=text,bg='#ffffff',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
-        item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
-    top=tk.Frame(frame,bg='#ffffff');top.pack(fill='x',pady=(0,10))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#ffffff',fg='#202124',font=(FONT_FAMILY,16))
-    title.pack(side='left')
-    window_controls(root,top,font,on_close=close_main,on_minimize=close_main,light=True)
-    monitor_dot=tk.Canvas(top,width=36,height=36,bg='#ffffff',highlightthickness=0)
-    monitor_dot.pack(side='right',padx=(0,8))
-    dot_images={}
-    for enabled,color in ((True,'#43c77a'),(False,'#ef5350')):
-        image=Image.new('RGB',(144,144),'#ffffff')
-        ImageDraw.Draw(image).ellipse((12,12,131,131),fill=color)
-        dot_images[enabled]=ImageTk.PhotoImage(image.resize((36,36),Image.Resampling.LANCZOS),master=root)
-    dot=monitor_dot.create_image(0,0,anchor='nw',image=dot_images[False])
-    bind_drag(root,top,title,monitor_dot)
-    label('有额度就继续 · 本地监控 · 后续任务支持截图', '#5f6368')
-    status=label('正在读取运行状态…',size=14)
-    detail=label('', '#5f6368',10)
-    note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#5f6368',10)
-    actions=tk.Frame(frame,bg='#ffffff');actions.pack(fill='x',pady=(2,18))
+        font=(FONT_FAMILY,11)
+        def label(text,color='#202124',size=11):
+            item=tk.Label(frame,text=text,bg='#ffffff',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
+            item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
+        top=tk.Frame(frame,bg='#ffffff');top.pack(fill='x',pady=(0,10))
+        title=tk.Label(top,text='Codex 自动续跑',bg='#ffffff',fg='#202124',font=(FONT_FAMILY,16))
+        title.pack(side='left')
+        window_controls(root,top,font,on_close=close_main,on_minimize=close_main,light=True)
+        monitor_dot=tk.Canvas(top,width=36,height=36,bg='#ffffff',highlightthickness=0)
+        monitor_dot.pack(side='right',padx=(0,8))
+        dot_images={}
+        for enabled,color in ((True,'#43c77a'),(False,'#ef5350')):
+            image=Image.new('RGB',(144,144),'#ffffff')
+            ImageDraw.Draw(image).ellipse((12,12,131,131),fill=color)
+            dot_images[enabled]=ImageTk.PhotoImage(image.resize((36,36),Image.Resampling.LANCZOS),master=root)
+        dot=monitor_dot.create_image(0,0,anchor='nw',image=dot_images[False])
+        bind_drag(root,top,title,monitor_dot)
+        label('有额度就继续 · 本地监控 · 后续任务支持截图', '#5f6368')
+        status=label('正在读取运行状态…',size=14)
+        detail=label('', '#5f6368',10)
+        note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#5f6368',10)
+        actions=tk.Frame(frame,bg='#ffffff');actions.pack(fill='x',pady=(2,18))
     results=queue.Queue();busy=[False];threads=[]
     def background(job):
         if busy[0]:return
@@ -173,37 +179,47 @@ def show():
         update_button.configure(text='检查中…')
         if sys.platform=='darwin':background(updater.check_macos_update)
         else:background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
-    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5,bg='#f3f4f6',fg='#3c4043')
-    update_button.pack(side='right')
-    github_path=Path(__file__).with_name('github-mark.png')
-    if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
-    with Image.open(github_path) as icon:
-        ink=Image.new('RGBA',icon.size,'#24292f')
-        ink.putalpha(icon.convert('RGBA').getchannel('A'))
-        github_icon=ImageTk.PhotoImage(ink.resize((16,16),Image.Resampling.LANCZOS),master=root)
-    github_button=tk.Button(footer,name='github_link',image=github_icon,
-        command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'),
-        bg='#ffffff',activebackground='#f3f4f6',bd=0,highlightthickness=0,
-        padx=8,pady=7,cursor='hand2',takefocus=True)
-    github_button.image=github_icon
-    github_button.pack(side='right',padx=(0,12))
-    def button(parent,text,command,blue=False):
-        b=RoundedButton(parent,text=text,command=command,bg='#2563eb' if blue else '#f3f4f6',fg='white' if blue else '#202124',font=(FONT_FAMILY,10),padx=10)
-        b.pack(side='left',padx=(0,6));return b
-    enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
-    button(actions,'暂停监控',lambda:background(pause))
-    button(actions,'打开运行记录',lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]) if sys.platform=='darwin' else os.startfile(w.APP_DIR))
-    label('选择任务，填写后续需求',size=13)
-    select=TaskPicker(frame,font=font,light=True);select.pack(fill='x',pady=(0,12))
+    if mac_ui:
+        update_button=mac_ui.update;update_button.configure(command=check_update)
+        enable_button=mac_ui.enable;enable_button.configure(command=lambda:background(install))
+        mac_ui.pause.configure(command=lambda:background(pause))
+        mac_ui.logs.configure(command=lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]))
+        mac_ui.github.configure(command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'))
+        select=mac_ui.select
+    else:
+        update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5,bg='#f3f4f6',fg='#3c4043')
+        update_button.pack(side='right')
+        github_path=Path(__file__).with_name('github-mark.png')
+        if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
+        with Image.open(github_path) as icon:
+            ink=Image.new('RGBA',icon.size,'#24292f')
+            ink.putalpha(icon.convert('RGBA').getchannel('A'))
+            github_icon=ImageTk.PhotoImage(ink.resize((16,16),Image.Resampling.LANCZOS),master=root)
+        github_button=tk.Button(footer,name='github_link',image=github_icon,
+            command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'),
+            bg='#ffffff',activebackground='#f3f4f6',bd=0,highlightthickness=0,
+            padx=8,pady=7,cursor='hand2',takefocus=True)
+        github_button.image=github_icon
+        github_button.pack(side='right',padx=(0,12))
+        def button(parent,text,command,blue=False):
+            b=RoundedButton(parent,text=text,command=command,bg='#2563eb' if blue else '#f3f4f6',fg='white' if blue else '#202124',font=(FONT_FAMILY,10),padx=10)
+            b.pack(side='left',padx=(0,6));return b
+        enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
+        button(actions,'暂停监控',lambda:background(pause))
+        button(actions,'打开运行记录',lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]) if sys.platform=='darwin' else os.startfile(w.APP_DIR))
+        label('选择任务，填写后续需求',size=13)
+        select=TaskPicker(frame,font=font,light=True);select.pack(fill='x',pady=(0,12))
     def refresh_pending(blink=False):
         index=select.current()
         pending=False
+        plan={}
         if 0<=index<len(threads):
             try:
                 plan=json.loads(w.plan_path(threads[index]['id']).read_text(encoding='utf-8'))
                 pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
             except (OSError,ValueError):pass
         select.set_pending(pending,blink=blink)
+        if mac_ui:mac_ui.saved(plan)
     def saved_feedback(thread):
         note.configure(text='已收到并保存后续任务。')
         index=select.current()
@@ -243,15 +259,20 @@ def show():
             open_plans.pop(thread,None)
             if not open_plans and exiting[0]:root.destroy()
         dialog.bind('<Destroy>',closed,add='+')
-    plan_actions=tk.Frame(frame,bg='#ffffff');plan_actions.pack(fill='x')
-    button(plan_actions,'打开需求输入框',compose,True)
-    button(plan_actions,'刷新任务',load_threads)
+    if mac_ui:
+        mac_ui.compose.configure(command=compose)
+        mac_ui.refresh.configure(command=load_threads)
+    else:
+        plan_actions=tk.Frame(frame,bg='#ffffff');plan_actions.pack(fill='x')
+        button(plan_actions,'打开需求输入框',compose,True)
+        button(plan_actions,'刷新任务',load_threads)
     def send_saved():
         index=select.current()
         if index<0:return
         thread=threads[index]['id']
         background(lambda:w.request_plan_send(thread))
-    button(plan_actions,'发送已存任务',send_saved)
+    if mac_ui:mac_ui.send.configure(command=send_saved)
+    else:button(plan_actions,'发送已存任务',send_saved)
 
     names={'followup-waiting-delay':'续跑已请求，等待 10 秒发送后续需求','waiting-quota':'等待额度恢复','no-quota-stall':'未发现需要续跑的额度中断任务',
            'resuming':'正在续跑','resumed':'本次续跑已返回','queued-awaiting-start':'已交给 Codex，等待开始',
@@ -270,12 +291,14 @@ def show():
            'followup-unconfirmed':'发送结果待确认，请勿重复发送',
            'followup-missing-image':'图片丢失，请重新添加',
            'followup-missing-file':'附件丢失，请重新添加'}
+    monitor_enabled=[None]
     def tick():
         w.APP_DIR.mkdir(parents=True,exist_ok=True)
         (w.APP_DIR/'ui-heartbeat').touch()
         refresh_pending()
         state=w.load_state();code=state.get('status','not-installed')
         stamp=state.get('lastCheckedAt')
+        if mac_ui:mac_ui.state(code,monitor_enabled[0],(w.APP_DIR/'paused.flag').exists())
         status.configure(text=names.get(code,'尚未启用监控' if code=='not-installed' else code))
         detail.configure(text=('最近检查 '+time.strftime('%m-%d %H:%M:%S',time.localtime(stamp)) if stamp else '尚无检查记录')+'  ·  '+{'primary':'主监控','backup':'备用监控'}.get(state.get('lastMonitor'),''))
         try:
@@ -292,9 +315,13 @@ def show():
                         raise
             elif kind=='monitor':
                 text,color,enabled=value
-                monitor_dot.itemconfigure(dot,image=dot_images[enabled])
-                enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',
-                                        bg='#21854d' if enabled else '#2d6acb')
+                monitor_enabled[0]=enabled
+                if mac_ui:
+                    enable_button.configure(text='更新状态' if enabled else '启用监控')
+                    mac_ui.state(code,enabled,(w.APP_DIR/'paused.flag').exists())
+                else:
+                    monitor_dot.itemconfigure(dot,image=dot_images[enabled])
+                    enable_button.configure(text='更新监控' if enabled else '启用 / 更新监控',bg='#21854d' if enabled else '#2d6acb')
             elif kind=='update-progress':
                 note.configure(text=value)
             elif isinstance(value,dict) and value.get('macosUpdate'):
@@ -351,7 +378,15 @@ def show():
     tick();load_threads()
     threading.Thread(target=refresh_monitor,daemon=True).start()
     root.lift()
-    root.tray=TrayIcon(root,exit_interface)
+    if sys.platform=='darwin':
+        def quit_application():
+            try:pause()
+            except OSError as error:
+                messagebox.showerror('无法退出','暂停监控失败：'+str(error),parent=root)
+                return
+            exit_interface()
+        root.tray=TrayIcon(root,exit_interface,on_quit=quit_application)
+    else:root.tray=TrayIcon(root,exit_interface)
     root.mainloop()
 
 

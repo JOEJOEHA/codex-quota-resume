@@ -29,7 +29,13 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     root.bind('<Destroy>',cancel_timers,add='+')
     task_title = ' '.join((task_name or old.get('taskName') or '当前任务').split()) or '当前任务'
     root.title(task_title if sys.platform=='win32' else '任务输入框')
-    body = rounded_window(root, 430, 535)
+    mac_ui=sys.platform=='darwin'
+    appearance=None
+    if mac_ui:
+        from macos_appearance import Appearance
+        appearance=Appearance(root)
+        root.appearance=appearance
+    body = rounded_window(root, 480 if mac_ui else 430, 650 if mac_ui else 535)
     font = (FONT_FAMILY, 11)
     def label(parent, text, color='#eeeeee', size=11):
         item = tk.Label(parent, text=text, bg='#181818', fg=color, font=(FONT_FAMILY, size),wraplength=374,justify='left')
@@ -55,10 +61,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     if sys.platform=='win32':
         task_heading(root,top,on_close=lambda:close_draft())
     else:
-        title = label(top, '任务输入框', size=16); title.pack(side='left')
+        title = label(top, '编辑后续任务', size=16); title.pack(side='left')
         window_controls(root,top,font,on_close=lambda:close_draft())
         bind_drag(root, top, title)
-        root.title(task_title + ' — 任务输入框')
+        root.title(task_title + ' — 编辑后续任务')
         task_label=tk.Label(body,name='task_caption',text=caption,bg='#181818',fg='#dddddd',
                             font=(FONT_FAMILY,11),anchor='w',height=1)
         task_label.pack(fill='x',pady=(6,0))
@@ -76,6 +82,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
     hint_text = '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送\n\n' + hint_text
     hint_text = caption + '\n\n' + hint_text
+    if mac_ui:hint_text='填写希望 Codex 接下来完成的内容…'
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)
@@ -93,17 +100,19 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     file_scroll.pack(side='right',fill='y');file_list.pack(side='left',fill='both',expand=True)
     def refresh_files():
         file_list.delete(0,'end')
-        for item in files:file_list.insert('end',Path(item).name)
+        for item in files:file_list.insert('end',('▤  ' if mac_ui else '')+Path(item).name)
         if files:file_row.pack(side='bottom',fill='x',pady=(4,0),before=preview_area)
         else:file_row.pack_forget()
     def remove_file(event=None):
         selected=file_list.curselection()
         if selected:files.pop(selected[0]);refresh_files()
+    if mac_ui:
+        RoundedButton(file_row,text='移除',command=remove_file,font=(FONT_FAMILY,9),padx=8,pady=5).pack(side='right')
     file_list.bind('<Double-Button-1>',remove_file)
     file_list.bind('<Delete>',remove_file)
     if sys.platform == 'darwin':file_list.bind('<BackSpace>',remove_file)
-    input_area=tk.Canvas(body,bg='#181818',highlightthickness=0,height=180)
-    input_area.pack(fill='both',expand=True,pady=18)
+    input_area=(tk.Frame(body,bg='#2b2b2b') if mac_ui else tk.Canvas(body,bg='#181818',highlightthickness=0,height=180))
+    input_area.pack(fill='both',expand=True,pady=16)
     editor = tk.Text(input_area, bg='#2b2b2b', fg='#f3f3f3', insertbackground='white',
                      selectbackground='#365c91', relief='flat', highlightthickness=0,
                      wrap='word', font=font, undo=True, height=8, padx=12, pady=12)
@@ -137,7 +146,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         actions.place(x=max(0,w-12),y=max(0,h-10),anchor='se')
         expand_host.place(x=max(0,w-24-actions.winfo_reqwidth()),y=max(0,h-14),anchor='se')
         add_host.place(x=12,y=max(0,h-46))
-    input_area.bind('<Configure>',resize_editor)
+    if mac_ui:
+        editor.pack(fill='both',expand=True)
+    else:input_area.bind('<Configure>',resize_editor)
     if saved:
         editor.insert('1.0', old.get('text', ''))
     photos = []
@@ -159,6 +170,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                     photo=ImageTk.PhotoImage(photo,master=preview_canvas)
                     tag=f'thumbnail-{index}'
                     preview_canvas.create_image(index*110+6,6,anchor='nw',image=photo,tags=('thumbnail',tag))
+                    preview_canvas.create_text(index*110+92,10,text='×',fill=appearance.colors['secondary'],tags=('remove-thumbnail',tag))
                     preview_canvas.tag_bind(tag,'<Button-1>',lambda e,p=item:remove(p))
                 else:
                     b = RoundedButton(previews, image=photo, padx=6, pady=6,
@@ -196,6 +208,13 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             folder.rmdir()
             raise
         files.append(str(target));refresh_files()
+    def choose_attachments():
+        for item in filedialog.askopenfilenames(parent=root,title='添加附件',filetypes=[('所有文件','*')]):
+            try:
+                try:
+                    with Image.open(item) as im:add_image(im)
+                except (OSError,ValueError):add_file(item)
+            except OSError as error:messagebox.showerror('无法添加附件',str(error),parent=root)
     def choose_files():
         for item in filedialog.askopenfilenames(parent=root,title='添加文件',filetypes=[('所有文件','*')]):
             try:add_file(item)
@@ -253,8 +272,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if sys.platform == 'darwin':
             large.bind('<Command-v>',paste)
             window.bind('<Command-Return>',lambda e:collapse_editor())
+        if appearance:appearance.adopt(window)
         large.focus_set()
-    expand_host=tk.Frame(input_area,bg='#2b2b2b')
+    attachment_toolbar=tk.Frame(body,bg='#181818') if mac_ui else None
+    expand_host=tk.Frame(attachment_toolbar if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b')
     expand_button=RoundedButton(expand_host,text='↗',command=expand_editor,font=font,padx=5,pady=1)
     expand_button.pack()
     def save(event=None, send_now=False):
@@ -308,9 +329,9 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
                    y=add_button.winfo_rooty()-body.winfo_rooty()-118)
         tk.Misc.lift(menu)
         if root.focus_get()==add_button:menu_items[0].focus_set()
-    add_host=tk.Frame(input_area,bg='#2b2b2b',width=expand_button.winfo_reqwidth(),height=expand_button.winfo_reqheight())
+    add_host=tk.Frame(attachment_toolbar if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b',width=160 if mac_ui else expand_button.winfo_reqwidth(),height=40 if mac_ui else expand_button.winfo_reqheight())
     add_host.pack_propagate(False)
-    add_button=RoundedButton(add_host,text='+',command=toggle_menu,font=font,padx=5,pady=1)
+    add_button=RoundedButton(add_host,text='+ 添加附件' if mac_ui else '+',command=choose_attachments if mac_ui else toggle_menu,font=font,padx=5,pady=1)
     add_button.pack(fill='both',expand=True)
     def dismiss_menu(event):
         widget=event.widget
@@ -323,9 +344,22 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
         else:close_draft()
     action_width=(tkfont.Font(font=font).measure('保存后续任务 ↑')+28)//2
-    actions=tk.Frame(input_area,bg='#2b2b2b')
-    button(actions, '保存', save, width_px=action_width).pack(side='left',padx=(0,10))
-    button(actions, '发送', lambda:save(send_now=True), True, width_px=action_width).pack(side='left')
+    actions=tk.Frame(body if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b')
+    if mac_ui:
+        actions.pack(side='bottom',fill='x',pady=(16,0),before=preview_area)
+        attachment_toolbar.pack(side='bottom',fill='x',pady=(8,0),before=preview_area)
+        add_host.pack(side='left')
+        expand_host.pack(side='right')
+        cancel_button=button(actions,'取消',close_draft)
+        cancel_button.pack(side='left')
+    save_button=button(actions,'保存',save,width_px=action_width)
+    send_button=button(actions,'发送',lambda:save(send_now=True),True,width_px=action_width)
+    if mac_ui:
+        send_button.pack(side='right')
+        save_button.pack(side='right',padx=(0,10))
+    else:
+        save_button.pack(side='left',padx=(0,10))
+        send_button.pack(side='left')
     editor.bind('<Control-v>', paste)
     root.bind('<Control-Return>', save)
     if sys.platform == 'darwin':
@@ -334,6 +368,10 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     root.bind('<Escape>',escape)
     refresh();refresh_files()
     refresh_placeholder()
+    if appearance:
+        appearance.adopt(root)
+        appearance.bind(cancel_button,bg='window',fg='secondary')
+        appearance.changed(refresh)
     def reveal():
         if parent is not None:
             root.update_idletasks()

@@ -14,13 +14,17 @@ class StatusTarget(NSObject):
     def open_(self, sender):
         self.events.put('show')
 
+    def quit_(self,sender):
+        self.events.put('quit')
+
     def exit_(self, sender):
         self.events.put('exit')
 
 
 class TrayIcon:
-    def __init__(self, root, on_exit):
+    def __init__(self, root, on_exit, on_quit=None):
         self.root, self.on_exit = root, on_exit
+        self.on_quit=on_quit or on_exit
         self.events = SimpleQueue()
         self.target = StatusTarget.alloc().init()
         self.target.events = self.events
@@ -37,12 +41,12 @@ class TrayIcon:
         button.setAction_('clicked:')
         button.sendActionOn_(NSEventMaskLeftMouseUp | NSEventMaskRightMouseUp)
         self.menu = NSMenu.alloc().init()
-        for text, action in [('打开主窗口', 'open:'), ('退出界面（后台监控继续）', 'exit:')]:
+        for text, action in [('打开主窗口','open:'),('退出程序并暂停监控','quit:'),('仅退出界面（后台监控继续）','exit:')]:
             item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(text, action, '')
             item.setTarget_(self.target)
             self.menu.addItem_(item)
         self.active = True
-        root.createcommand('tk::mac::Quit', lambda: self.events.put('exit'))
+        root.createcommand('tk::mac::Quit', lambda: self.events.put('quit'))
         root.createcommand('tk::mac::ReopenApplication', lambda: self.events.put('show'))
         root.bind('<Destroy>', self.close, add='+')
         self.poll()
@@ -59,6 +63,7 @@ class TrayIcon:
             if action == 'show':self.restore()
             elif action == 'menu':self.item.popUpStatusItemMenu_(self.menu)
             elif action == 'exit':self.on_exit()
+            elif action == 'quit':self.on_quit()
             if not self.active:return
         self.timer = self.root.after(100, self.poll)
 

@@ -1,0 +1,69 @@
+"""Native appearance/lifecycle regressions with isolated files and no Codex calls."""
+import json
+import os
+import tempfile
+import tkinter as tk
+from pathlib import Path
+from unittest.mock import patch
+from macos_appearance import PALETTES,status_presentation
+from macos_main_ui import build
+import plan_dialog
+
+assert status_presentation('waiting-quota',True)==('● 等待额度恢复','wait')
+assert status_presentation('resuming',True)==('● 正在续跑','good')
+assert status_presentation('resume-failed',True)==('! 异常','error')
+assert status_presentation('resuming',True,True)==('Ⅱ 已暂停','neutral')
+
+def walk(widget):
+    yield widget
+    for child in widget.winfo_children():yield from walk(child)
+
+def button(root,text):return next(w for w in walk(root) if isinstance(w,tk.Button) and w.cget('text')==text)
+
+with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_THEME='light'):
+    root=tk.Tk();ui=build(root,'3.1.0beta',root.withdraw);root.update()
+    assert not root.overrideredirect()
+    ui.select.set_values(['A very long task title '*15,'Second task'])
+    root.update()
+    ui.saved({});assert ui.send.cget('state')=='disabled'
+    ui.saved({'status':'saved','text':'Continue developing'})
+    assert ui.compose.cget('text')=='编辑后续任务' and ui.send.cget('state')=='normal'
+    ui.state('waiting-quota',True,False)
+    ui.appearance.apply('dark');root.update()
+    assert ui.frame.cget('bg')==PALETTES['dark']['window']
+    assert ui.select.listing.cget('bg')==PALETTES['dark']['card']
+    ui.select.toggle();root.update();ui.select.hide();root.update()
+    assert not ui.select.panel.winfo_viewable()
+    root.geometry('620x760');root.update()
+    assert ui.select.button.winfo_width()<=ui.select.winfo_width()
+    for w in (ui.compose,ui.send,ui.update):
+        assert w.winfo_viewable() and w.winfo_rooty()+w.winfo_height()<=root.winfo_rooty()+root.winfo_height()
+    root.geometry('480x650');root.update()
+    path=Path(folder)/'plan.json'
+    dialog=plan_dialog.show('test-thread',path,lambda p,v:p.write_text(json.dumps(v)),parent=root,task_name='Test task')
+    root.update();assert not dialog.overrideredirect()
+    editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
+    dialog_theme=dialog.appearance
+    for name in ('dark','light'):
+        dialog_theme.apply(name);root.update()
+        assert editor.cget('bg')==PALETTES[name]['field']
+        assert editor.cget('fg')==PALETTES[name]['text']
+    source=Path(folder)/'report.txt';source.write_text('attachment')
+    image=Path(folder)/'picture.png'
+    from PIL import Image
+    Image.new('RGB',(80,60),'green').save(image)
+    with patch.object(plan_dialog.filedialog,'askopenfilenames',return_value=[str(source),str(image)]):
+        button(dialog,'+ 添加附件').invoke()
+    root.update()
+    editor.insert('1.0','Saved follow-up')
+    button(dialog,'保存').invoke();root.update()
+    data=json.loads(path.read_text());assert not data['sendRequested']
+    assert len(data['files'])==1 and len(data['images'])==1
+    dialog=plan_dialog.show('test-thread',path,lambda p,v:p.write_text(json.dumps(v)),parent=root,task_name='Test task')
+    root.update()
+    editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
+    assert editor.get('1.0','end-1c')=='Saved follow-up'
+    button(dialog,'发送').invoke();root.update()
+    assert json.loads(path.read_text())['sendRequested']
+    root.destroy()
+print('MACOS_REDESIGN_OK: native titles, theme transition, saved/empty card, resized layout, mixed attachments, save/reload/send')

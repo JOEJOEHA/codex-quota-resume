@@ -6,6 +6,16 @@ A local desktop utility that resumes unfinished Codex tasks interrupted by expli
 
 [Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [Contributing](CONTRIBUTING.md) · [macOS Codex handoff prompt (中文 / English)](docs/macos-handoff.md)
 
+## macOS Developer Preview · v3.1.0beta
+
+Use the `MacOS-version` branch for macOS development. This remains a Developer Preview, pending real quota-recovery and target-device acceptance.
+
+- macOS UI / UX redesign with unified Light / Dark appearance that follows system changes while open.
+- Improved status presentation, redesigned follow-up task workflow, cleaner task editor and improved button hierarchy.
+- Improved macOS window behavior with native title bars and general UI consistency improvements.
+- Unified attachment picker, bounded image/file previews and individual removal. Existing watcher, persistence, delayed sending and attachment formats remain in use.
+- Apple Silicon and Intel build configurations are retained.
+
 ## Downloads and status
 
 | Platform | Release asset | Status |

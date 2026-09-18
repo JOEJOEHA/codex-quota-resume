@@ -7,7 +7,7 @@ from pathlib import Path
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
 
-FONT_FAMILY = 'PingFang SC' if sys.platform == 'darwin' else 'Microsoft YaHei UI'
+FONT_FAMILY = '.AppleSystemUIFont' if sys.platform == 'darwin' else 'Microsoft YaHei UI'
 
 
 class RoundedButton(tk.Button):
@@ -70,6 +70,7 @@ class TaskPicker(tk.Frame):
         self.index=-1
         self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle,width_px=374,bg=surface,fg=foreground)
         self.button.pack(fill='x')
+        self.bind('<Configure>',self.fit_width,add='+')
         self.flag=tk.Canvas(self,width=24,height=26,bg=surface,highlightthickness=0)
         self.flag.create_line(5,3,5,24,fill='#dddddd',width=2)
         self.flag_shape=self.flag.create_polygon(6,3,21,3,17,9,21,15,6,15,fill='#ef5350',outline='')
@@ -87,7 +88,9 @@ class TaskPicker(tk.Frame):
         canvas=tk.Canvas(self.panel,bg=self.panel.cget('bg'),highlightthickness=0)
         canvas.pack(fill='both',expand=True)
         paint_rounded_surface(canvas,374,212,menu_surface,'#dfe3e8' if light else '#383838',14)
+        self.popup_canvas=canvas
         interior=tk.Frame(self.panel,bg=menu_surface)
+        self.popup_interior=interior
         interior.place(x=10,y=10,width=354,height=192)
         self.listing=tk.Listbox(interior,bg=menu_surface,fg=foreground,
                                selectbackground='#e8f0fe' if light else '#383838',
@@ -106,6 +109,26 @@ class TaskPicker(tk.Frame):
         self.panel.bind('<FocusOut>',self.focus_left,add='+')
         self.panel.protocol('WM_DELETE_WINDOW',self.hide)
 
+    def fit_width(self,event):
+        if event.widget != self or sys.platform!='darwin':return
+        self.button.fixed_width=max(100,event.width)
+        self.current(self.index)
+        if self.panel.winfo_ismapped():self.hide(restore_focus=False)
+
+    def apply_appearance(self,appearance):
+        appearance.bind(self,bg='card')
+        appearance.bind(self.button,bg='field',fg='text')
+        appearance.bind(self.popup_interior,bg='card')
+        appearance.bind(self.listing,bg='card',fg='text',selectbackground='blue',selectforeground='white')
+        def repaint():
+            if not self.winfo_exists():return
+            self.popup_canvas.delete('all')
+            colors=appearance.colors
+            paint_rounded_surface(self.popup_canvas,max(100,self.button.fixed_width),212,colors['card'],colors['separator'],14)
+        appearance.changed(repaint)
+        self.repaint_popup=repaint
+        repaint()
+
     def parent_hidden(self,event):
         if event.widget==self.winfo_toplevel():self.hide(restore_focus=False)
 
@@ -123,6 +146,8 @@ class TaskPicker(tk.Frame):
 
     def set_pending(self,pending,blink=False):
         self.pending=pending
+        if sys.platform == 'darwin':
+            self.cancel_flag();self.flag.place_forget();return
         if not pending:
             self.cancel_flag();self.flag.place_forget();return
         self.flag.place(relx=1,x=-35,y=8)
@@ -149,7 +174,7 @@ class TaskPicker(tk.Frame):
         self.index=index
         text=self.values[index] if 0<=index<len(self.values) else '选择任务'
         font=tkfont.Font(font=self.button.cget('font'))
-        while font.measure(text)>260:text=text[:-2]+'…'
+        while len(text)>1 and font.measure(text)>(max(30,self.button.fixed_width-48) if sys.platform=='darwin' else 260):text=text[:-2]+'…'
         self.button.configure(text=text+'  ▾')
 
     def toggle(self):
@@ -158,7 +183,10 @@ class TaskPicker(tk.Frame):
         x=self.winfo_rootx()
         y=self.winfo_rooty()-220
         if y<0:y=self.winfo_rooty()+self.winfo_height()+6
-        self.panel.geometry(f'374x212{x:+d}{y:+d}')
+        width=max(100,self.button.winfo_width())
+        self.popup_interior.place_configure(width=max(1,width-20))
+        self.panel.geometry(f'{width}x212{x:+d}{y:+d}')
+        if hasattr(self,'repaint_popup'):self.repaint_popup()
         self.panel.deiconify()
         self.panel.lift()
         self.listing.selection_clear(0,'end')
@@ -224,11 +252,11 @@ def place_beside(dialog,parent):
         from macos import work_area
         parent.update_idletasks()
         x,y=parent.winfo_x(),parent.winfo_y()
-        width,height=parent.window_size
+        width,height=parent.winfo_width(),parent.winfo_height()
         dialogs=[item for item in parent.winfo_children() if getattr(item,'is_task_composer',False)
                  and (item is dialog or item.state()=='normal')]
         if dialog not in dialogs:dialogs.append(dialog)
-        size=dialog.window_size if dialog is not None else (430,535)
+        size=(dialog.winfo_width(),dialog.winfo_height()) if dialog is not None else (480,650)
         main,children=group_positions((x,y,width,height),size,
                                        work_area(x+width//2,y+height//2),len(dialogs))
         if dialog is None:return
@@ -263,12 +291,6 @@ def place_beside(dialog,parent):
 
 def minimize(root):
     if sys.platform == 'darwin':
-        root.overrideredirect(False)
-        def mapped(event):
-            if event.widget == root and root.state() == 'normal':
-                root.overrideredirect(True)
-                root.unbind('<Map>',binding)
-        binding=root.bind('<Map>',mapped,add='+')
         root.iconify()
         return
     configure_taskbar(root)
@@ -276,6 +298,7 @@ def minimize(root):
 
 
 def window_controls(root,parent,font,on_close=None,on_minimize=None,light=False):
+    if sys.platform=='darwin':return
     for text,command in [('×',on_close or root.destroy),('—',on_minimize or (lambda:minimize(root)))]:
         RoundedButton(parent,text=text,command=command,font=font,padx=16,pady=8,bg='#f3f4f6' if light else '#2b2b2b',fg='#3c4043' if light else '#eeeeee').pack(side='right',padx=(6,0))
 
@@ -293,6 +316,7 @@ def configure_taskbar(root):
 
 
 def bind_drag(root, *widgets):
+    if sys.platform=='darwin':return
     offset=[0,0]
     def start(event):
         offset[:]=[event.x_root-root.winfo_x(),event.y_root-root.winfo_y()]
@@ -318,6 +342,15 @@ def paint_rounded_surface(canvas,width,height,fill,border,radius=26):
 
 def rounded_window(root,width,height,surface='#181818',border='#383838'):
     root.window_size=(width,height)
+    if sys.platform == 'darwin':
+        root.overrideredirect(False)
+        root.configure(bg=surface)
+        root.geometry(f'{width}x{height}')
+        root.minsize(width,height)
+        root.resizable(True,True)
+        body=tk.Frame(root,bg=surface,padx=24,pady=20)
+        body.pack(fill='both',expand=True)
+        return body
     if sys.platform != 'darwin':ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
     root.overrideredirect(True)
     background='systemTransparent' if sys.platform == 'darwin' else '#010203'
