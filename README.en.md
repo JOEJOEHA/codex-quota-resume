@@ -10,7 +10,7 @@ A local desktop utility that resumes unfinished Codex tasks interrupted by expli
 
 | Platform | Release asset | Status |
 |---|---|---|
-| Windows 10 / 11 | `CodexQuotaResume.exe` | v3.0.0-beta.38; includes Python, Tkinter and Pillow |
+| Windows 10 / 11 | `CodexQuotaResume.exe` | v3.0.0-beta.39; includes Python, Tkinter and Pillow |
 | Apple Silicon: M1 / M2 / M3 and other M-series Macs | `CodexQuotaResume-macOS-arm64-preview.zip` | Development preview |
 | Intel Mac | `CodexQuotaResume-macOS-x86_64-preview.zip` | Development preview |
 
@@ -22,7 +22,7 @@ See [macOS development](docs/macos.md) for source setup, building and local vali
 
 ## Behavior
 
-The v3.0.0-beta.38 release updates Windows only. Composer headers now show the task title, truncate long titles, and omit the duplicate task name and save/send explanation below the header. Expanded editors also show the task title. Download the unchanged macOS previews from [v3.0.0-beta.36](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36).
+The v3.0.0-beta.39 release updates Windows only: remove the duplicate task title from the gray input area while keeping the window header, long-title truncation and expanded-editor title. Download the unchanged macOS previews from [v3.0.0-beta.36](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36).
 
 - The primary watcher checks every 60 seconds; an independent backup checks every 300 seconds. Both share a process lock and send records.
 - Only explicit quota interruptions of unfinished work qualify. Zero remaining quota alone, normal completion and ordinary network errors do not trigger resumption. Live quota is checked before sending.

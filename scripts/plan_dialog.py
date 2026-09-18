@@ -75,7 +75,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
     if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
     hint_text = '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送\n\n' + hint_text
-    hint_text = caption + '\n\n' + hint_text
+    if sys.platform != 'win32':hint_text = caption + '\n\n' + hint_text
     preview_area=tk.Frame(body,bg='#181818')
     preview_area.pack(side='bottom',fill='x')
     preview_canvas=tk.Canvas(preview_area,height=80,bg='#181818',highlightthickness=0)

@@ -3,6 +3,7 @@ import ctypes
 from ctypes import wintypes
 import json
 import os
+import sys
 import tempfile
 import time
 import tkinter as tk
@@ -44,7 +45,8 @@ def loop(root,*args,**kwargs):
             assert len(dialogs)==1
             dialog=dialogs[0]
             labels=[w.cget('text') for w in walk(dialog) if isinstance(w,tk.Label)]
-            assert any(text.startswith('Integration task\n\n') for text in labels) and thread not in '\n'.join(labels)
+            assert any(text.startswith('Integration task\n\n') for text in labels) == (sys.platform!='win32')
+            assert thread not in '\n'.join(labels)
             assert dialog.title()=='Integration task'
             assert 'Integration task' in labels
             elapsed=time.perf_counter()-started

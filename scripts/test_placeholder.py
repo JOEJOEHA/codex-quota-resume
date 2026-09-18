@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory() as folder:
  assert len(actions)==2
  assert actions[0].winfo_rooty()==actions[1].winfo_rooty()
  assert actions[0].winfo_width()==actions[1].winfo_width()
- assert 'Placeholder test' in hint.cget('text')
+ assert ('Placeholder test' in hint.cget('text')) == (sys.platform!='win32')
  assert all(w.winfo_rooty()>=editor.winfo_rooty()+editor.winfo_height() for w in actions)
  expand=next(w for w in buttons if w.cget('text')=='\u2197')
  assert add.winfo_height()==expand.winfo_height()
