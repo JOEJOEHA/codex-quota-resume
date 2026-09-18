@@ -45,9 +45,14 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
     dialog_theme=dialog.appearance
     for name in ('dark','light'):
-        dialog_theme.apply(name);root.update()
+        os.environ['QUOTA_RESUME_THEME']=name
+        ui.appearance.apply(name);dialog_theme.apply(name);root.update()
         assert editor.cget('bg')==PALETTES[name]['field']
         assert editor.cget('fg')==PALETTES[name]['text']
+        if os.environ.get('QUOTA_RESUME_SKIP_SCREEN_CAPTURE')!='1':
+            from PIL import ImageGrab
+            output=Path('build');output.mkdir(exist_ok=True)
+            ImageGrab.grab().save(output/('macos-redesign-'+name+'.png'))
     source=Path(folder)/'report.txt';source.write_text('attachment')
     image=Path(folder)/'picture.png'
     from PIL import Image

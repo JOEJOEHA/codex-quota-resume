@@ -75,6 +75,7 @@ class TaskPicker(tk.Frame):
         self.flag.create_line(5,3,5,24,fill='#dddddd',width=2)
         self.flag_shape=self.flag.create_polygon(6,3,21,3,17,9,21,15,6,15,fill='#ef5350',outline='')
         self.flag_timer=None
+        self.focus_timer=None
         self.pending=False
         self.bind('<Destroy>',self.cancel_flag,add='+')
         # A separate native popup is removed by the window compositor on hide.
@@ -111,7 +112,9 @@ class TaskPicker(tk.Frame):
 
     def fit_width(self,event):
         if event.widget != self or sys.platform!='darwin':return
-        self.button.fixed_width=max(100,event.width)
+        width=max(100,event.width)
+        if width==self.button.fixed_width:return
+        self.button.fixed_width=width
         self.current(self.index)
         if self.panel.winfo_ismapped():self.hide(restore_focus=False)
 
@@ -133,16 +136,20 @@ class TaskPicker(tk.Frame):
         if event.widget==self.winfo_toplevel():self.hide(restore_focus=False)
 
     def focus_left(self,event):
+        if self.focus_timer:self.after_cancel(self.focus_timer)
         def check():
-            if not self.winfo_exists() or not self.panel.winfo_exists():return
+            self.focus_timer=None
+            if not self.winfo_exists() or not self.panel.winfo_exists() or not self.panel.winfo_ismapped():return
             focused=self.focus_get()
             if focused is None or focused.winfo_toplevel()!=self.panel:
                 self.hide(restore_focus=False)
-        self.after_idle(check)
+        # Cocoa focus transfer to a native popup is asynchronous on Tk 8.6.
+        self.focus_timer=self.after(100,check)
 
     def cancel_flag(self,event=None):
         if event is not None and event.widget!=self:return
         if self.flag_timer:self.after_cancel(self.flag_timer);self.flag_timer=None
+        if event is not None and self.focus_timer:self.after_cancel(self.focus_timer);self.focus_timer=None
 
     def set_pending(self,pending,blink=False):
         self.pending=pending

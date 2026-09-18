@@ -54,4 +54,4 @@ jobs:
         if: always()
         with:
           name: macOS-ui-${{ matrix.os }}
-          path: build/macos-ui.png
+          path: build/macos*.png
