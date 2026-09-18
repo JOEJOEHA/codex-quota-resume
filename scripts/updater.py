@@ -7,15 +7,14 @@ import platform
 from pathlib import Path
 import re
 import subprocess
-import sys
 import tempfile
 import time
 import urllib.request
 import urllib.error
 import urllib.parse
 
-MACOS_VERSION = '3.1.0beta'
-VERSION = MACOS_VERSION if sys.platform == 'darwin' else '3.0.0-beta.38'
+VERSION = '3.1.0beta'
+MACOS_VERSION = VERSION  # Build metadata derives from the same version source.
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'
 
