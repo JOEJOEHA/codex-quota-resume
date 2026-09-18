@@ -1,4 +1,4 @@
-name: macOS preview
+name: macOS 3.1.0bata
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
         run: dist/CodexQuotaResume.app/Contents/MacOS/CodexQuotaResume --self-test
       - uses: actions/upload-artifact@v4
         with:
-          name: macOS-preview-${{ matrix.os }}
+          name: macOS-3.1.0bata-${{ matrix.os }}
           path: |
             dist/*-preview.zip
             dist/*.sha256

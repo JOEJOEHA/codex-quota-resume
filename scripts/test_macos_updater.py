@@ -19,6 +19,14 @@ class UpdateTests(unittest.TestCase):
             run.assert_not_called();launch.assert_not_called()
             return result
 
+    def test_bata_version(self):
+        self.assertEqual(u.version('v3.1.0bata'), u.version('3.1.0-beta.0'))
+        self.assertGreater(u.version('3.1.0bata'), u.version('3.0.0-beta.38'))
+        self.assertLess(u.version('3.1.0bata'), u.version('3.1.0'))
+        result = self.check([self.release('v3.1.0bata')])
+        self.assertEqual(result['version'], 'v3.1.0bata')
+        self.assertTrue(result['available'])
+
     def test_latest_and_architecture(self):
         draft=self.release('v9.0.0');draft['draft']=True
         result=self.check([self.release('v3.0.0-beta.35'),self.release(),draft])
@@ -41,7 +49,7 @@ class UpdateTests(unittest.TestCase):
         response=io.BytesIO();response.geturl=lambda:f'https://github.com/{u.REPO}/releases/tag/v3.0.0'
         error=u.urllib.error.HTTPError('api',429,'limit',{},None)
         with patch.object(u,'fetch',side_effect=[error,response]):
-            result=u.check_macos_update(machine='arm64')
+            result=u.check_macos_update(current='3.0.0-beta.36',machine='arm64')
         self.assertTrue(result['available'] and result['limited'])
         self.assertIsNone(result['downloadUrl'])
 
