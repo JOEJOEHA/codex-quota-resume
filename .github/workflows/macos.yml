@@ -7,7 +7,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15-intel]
+        include:
+          - os: macos-14
+            python: '3.13'
+          - os: macos-15-intel
+            python: '3.13'
+          - os: macos-14
+            python: '3.14'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
@@ -16,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python }}
       - run: python -m pip install -r requirements.txt pyinstaller
       - name: Offline watcher and platform checks
         run: |
@@ -47,12 +53,12 @@ jobs:
         run: dist/CodexQuotaResume.app/Contents/MacOS/CodexQuotaResume --self-test
       - uses: actions/upload-artifact@v4
         with:
-          name: macOS-3.1.0beta-${{ matrix.os }}
+          name: macOS-3.1.0beta-${{ matrix.os }}-py${{ matrix.python }}
           path: |
             dist/*-preview.zip
             dist/*.sha256
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macOS-ui-${{ matrix.os }}
+          name: macOS-ui-${{ matrix.os }}-py${{ matrix.python }}
           path: build/macos*.png

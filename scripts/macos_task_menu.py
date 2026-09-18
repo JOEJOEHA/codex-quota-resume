@@ -1,57 +1,47 @@
-"""Native task menu. Cocoa actions only enqueue; Tk changes after tracking ends."""
-from queue import SimpleQueue
-from AppKit import NSObject,NSMenu,NSMenuItem,NSScreen,NSMakePoint,NSFont,NSFontAttributeName,NSAppearance
-from Foundation import NSString
+"""Aqua task menu via Tcl/Tk, which owns Python callback/GIL transitions.
 
-
-class TaskMenuTarget(NSObject):
-    def selected_(self,sender):
-        self.events.put(int(sender.representedObject()))
+Never enter AppKit menu tracking directly from a Python Tk callback: on
+Python 3.14 / Tk 9, nested Tcl callbacks can abort in PyEval_RestoreThread.
+"""
+import tkinter as tk
+from tkinter import font as tkfont
 
 
 class NativeTaskMenu:
-    def __init__(self):
-        self.menu=NSMenu.alloc().initWithTitle_('选择任务')
-        self.menu.setAutoenablesItems_(False)
-        self.target=TaskMenuTarget.alloc().init()
-        self.target.events=SimpleQueue()
+    def __init__(self,owner):
+        self.owner=owner
+        self.menu=tk.Menu(owner,tearoff=False)
         self.active=False
         self.theme='light'
+        self.menu.bind('<Unmap>',lambda event:setattr(self,'active',False),add='+')
 
-    def configure(self,values,index,width):
-        self.menu.removeAllItems()
-        font=NSFont.menuFontOfSize_(0)
-        self.menu.setFont_(font)
-        self.menu.setMinimumWidth_(float(width))
-        attributes={NSFontAttributeName:font}
-        budget=max(80,width-64)
+    def configure(self,values,index,width,on_select):
+        self.menu.delete(0,'end')
+        font=tkfont.nametofont('TkMenuFont',root=self.owner)
+        self.menu.configure(font=font)
         for i,value in enumerate(values):
-            full=' '.join(value.split())
-            text=full
-            while len(text)>1 and NSString.stringWithString_(text).sizeWithAttributes_(attributes).width>budget:
+            text=' '.join(value.split())
+            while len(text)>1 and font.measure(text)>max(80,width-64):
                 text=text[:-2]+'…'
-            item=NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(text,'selected:','')
-            item.setTarget_(self.target);item.setRepresentedObject_(i)
-            item.setState_(1 if i==index else 0)
-            item.setToolTip_(full)
-            self.menu.addItem_(item)
+            def choose(position=i):
+                self.dismiss()
+                on_select(position)
+            self.menu.add_command(label=('✓ ' if i==index else '   ')+text,command=choose)
 
-    def present(self,values,index,x,y,width):
-        if not values:return None
-        while not self.target.events.empty():self.target.events.get()
-        self.configure(values,index,width)
-        # Tk's desktop origin is at the top of the primary display; AppKit is below it.
-        top=NSScreen.screens()[0].frame().size.height
-        previous=NSAppearance.currentAppearance()
-        appearance=NSAppearance.appearanceNamed_('NSAppearanceNameDarkAqua' if self.theme=='dark' else 'NSAppearanceNameAqua')
+    def present(self,values,index,x,y,width,on_select):
+        if not values:return
+        self.dismiss()
+        self.configure(values,index,width,on_select)
         self.active=True
         try:
-            NSAppearance.setCurrentAppearance_(appearance)
-            self.menu.popUpMenuPositioningItem_atLocation_inView_(None,NSMakePoint(x,top-y),None)
+            # Tcl/Tk performs native Aqua tracking with its own thread state.
+            # Coordinates remain in Tk's desktop space, including other displays.
+            self.menu.tk_popup(x,y)
         finally:
-            self.active=False
-            NSAppearance.setCurrentAppearance_(previous)
-        return self.target.events.get() if not self.target.events.empty() else None
+            if self.menu.grab_current()==self.menu:self.menu.grab_release()
 
     def dismiss(self):
-        if self.active:self.menu.cancelTracking()
+        if not self.menu.winfo_exists():return
+        self.menu.unpost()
+        if self.menu.grab_current()==self.menu:self.menu.grab_release()
+        self.active=False

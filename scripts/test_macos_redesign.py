@@ -43,7 +43,8 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     ui.appearance.apply('dark');root.update()
     assert ui.frame.cget('bg')==PALETTES['dark']['window']
     assert ui.select.native_menu.theme=='dark'
-    with patch.object(ui.select.native_menu,'present',return_value=1):ui.select.toggle()
+    ui.select.native_menu.configure(ui.select.values,0,380,ui.select.current)
+    ui.select.native_menu.menu.invoke(1)
     assert ui.select.current()==1
     ui.select.hide()
     assert not ui.select.native_menu.active

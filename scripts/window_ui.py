@@ -104,7 +104,7 @@ class TaskPicker(tk.Frame):
         self.native_menu=None
         if sys.platform=='darwin':
             from macos_task_menu import NativeTaskMenu
-            self.native_menu=NativeTaskMenu()
+            self.native_menu=NativeTaskMenu(self)
             self.winfo_toplevel().bind('<Unmap>',self.parent_hidden,add='+')
             self.bind('<Destroy>',lambda e:self.native_menu.dismiss() if e.widget==self else None,add='+')
             return
@@ -224,9 +224,8 @@ class TaskPicker(tk.Frame):
     def toggle(self):
         if self.native_menu:
             self.update_idletasks()
-            chosen=self.native_menu.present(self.values,self.index,self.winfo_rootx(),
-                                            self.winfo_rooty()+self.winfo_height()+4,self.button.winfo_width())
-            if chosen is not None:self.current(chosen)
+            self.native_menu.present(self.values,self.index,self.winfo_rootx(),
+                                            self.winfo_rooty()+self.winfo_height()+4,self.button.winfo_width(),self.current)
             return
         if self.panel.winfo_ismapped():self.hide();return
         self.update_idletasks()

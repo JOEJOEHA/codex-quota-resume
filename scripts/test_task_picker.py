@@ -12,31 +12,26 @@ picker.set_values(['First task','Second task'])
 root.update();root.focus_force()
 assert body.cget('bg')=='#ffffff'
 if sys.platform=='darwin':
-    # NSMenu's tracking loop does not reliably service timers on hosted runners.
-    # Exercise real native items/actions and the presentation boundary without
-    # blocking CI in an unattended menu. Physical menu tracking is manual QA.
-    class MenuPresentation:
-        def __init__(self,native):self.native=native;self.selection=None;self.cancelled=False
-        def __getattr__(self,name):return getattr(self.native,name)
-        def popUpMenuPositioningItem_atLocation_inView_(self,item,point,view):
-            assert picker.native_menu.active
-            if self.selection is not None:self.native.performActionForItemAtIndex_(self.selection)
-            picker.native_menu.dismiss()
-        def cancelTracking(self):self.cancelled=True
-    real=picker.native_menu.menu
-    presentation=MenuPresentation(real);picker.native_menu.menu=presentation
-    for _ in range(3):
-        presentation.selection=1;picker.toggle()
-        assert picker.current()==1 and presentation.cancelled and not picker.native_menu.active
-        assert real.numberOfItems()==2
-        assert str(real.itemAtIndex_(1).toolTip())=='Second task'
-    for name in ('light','dark'):
-        picker.native_menu.theme=name;presentation.selection=None
-        picker.toggle();assert picker.current()==1 and not picker.native_menu.active
-    assert not hasattr(picker,'panel'), 'macOS must not create a transparent Tk popup'
+    # Use the real Tcl/Tk popup path; no AppKit presentation substitute.
+    for theme in ('light','dark'):
+        picker.native_menu.theme=theme
+        for _ in range(3):
+            def select():
+                picker.native_menu.menu.invoke(1)
+                picker.hide()
+            root.after(400,select)
+            picker.toggle()
+            root.after(650,root.quit)
+            root.mainloop()
+            assert picker.current()==1 and not picker.native_menu.active
+        root.after(400,picker.hide)
+        picker.toggle()
+        root.after(650,root.quit);root.mainloop()
+        assert not picker.native_menu.active
+    assert not hasattr(picker,'panel')
     root.withdraw();root.update();assert not picker.native_menu.active
-    root.deiconify();root.update();assert not picker.native_menu.active
-    print('TASK_PICKER_OK: native items/actions, queued selection, cancellation boundary, both themes, no Tk transparent window; physical tracking requires manual QA')
+    root.deiconify();root.update()
+    print('TASK_PICKER_OK: real Tk/Aqua popup, repeated callbacks during tracking, cancellation, no direct PyObjC event loop')
 
 else:
     for _ in range(3):
