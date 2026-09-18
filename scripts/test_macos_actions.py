@@ -38,6 +38,7 @@ def loop(root):
             button(root,'暂停监控').invoke()
             wait(root,lambda:any(isinstance(w,tk.Label) and w.cget('text')=='已暂停后续检查；正在执行的任务不受影响。' for w in walk(root)))
             assert (app.w.APP_DIR/'paused.flag').exists()
+            wait(root,lambda:any(isinstance(w,tk.Button) and w.cget('text')=='恢复监控' for w in walk(root)))
             button(root,'恢复监控').invoke()
             wait(root,lambda:any(isinstance(w,tk.Label) and w.cget('text')=='RESUME_COMPLETE' for w in walk(root)))
             installer.assert_called_once()
