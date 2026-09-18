@@ -5,7 +5,7 @@ import tempfile
 import tkinter as tk
 from pathlib import Path
 from unittest.mock import patch
-from macos_appearance import PALETTES,status_presentation
+from macos_appearance import PALETTES,status_presentation,status_detail
 from macos_main_ui import build
 import plan_dialog
 
@@ -36,6 +36,8 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     ui.saved({'status':'saved','text':'Continue developing'})
     assert ui.compose.cget('text')=='编辑后续任务' and ui.send.cget('state')=='normal'
     ui.state('waiting-quota',True,False)
+    ui.status.configure(text=status_detail('waiting-quota','等待额度恢复'))
+    ui.detail.configure(text='最近检查：21:27:18')
     os.environ['QUOTA_RESUME_THEME']='dark'
     ui.appearance.apply('dark');root.update()
     assert ui.frame.cget('bg')==PALETTES['dark']['window']

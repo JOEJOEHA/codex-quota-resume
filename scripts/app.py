@@ -299,7 +299,11 @@ def show():
         state=w.load_state();code=state.get('status','not-installed')
         stamp=state.get('lastCheckedAt')
         if mac_ui:mac_ui.state(code,monitor_enabled[0],(w.APP_DIR/'paused.flag').exists())
-        status.configure(text=names.get(code,'尚未启用监控' if code=='not-installed' else code))
+        description=names.get(code,'尚未启用监控' if code=='not-installed' else code)
+        if mac_ui:
+            from macos_appearance import status_detail
+            description=status_detail(code,description,(w.APP_DIR/'paused.flag').exists())
+        status.configure(text=description)
         detail.configure(text=('最近检查 '+time.strftime('%m-%d %H:%M:%S',time.localtime(stamp)) if stamp else '尚无检查记录')+'  ·  '+{'primary':'主监控','backup':'备用监控'}.get(state.get('lastMonitor'),''))
         try:
             kind,value=results.get_nowait()

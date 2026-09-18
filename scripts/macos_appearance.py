@@ -93,3 +93,14 @@ def status_presentation(code,enabled=None,paused=False):
     if enabled is False:return '● 尚未启用','neutral'
     if enabled is None:return '● 正在读取状态','neutral'
     return '● 监控中','good'
+
+
+def status_detail(code,fallback,paused=False):
+    if paused:return '后续自动检查已暂停，正在执行的任务不受影响。'
+    return {
+        'waiting-quota':'额度恢复后，将继续原任务。',
+        'resuming':'正在接续原任务，请稍候。',
+        'dispatch-active':'正在等待当前任务完成。',
+        'no-quota-stall':'尚未发现因额度中断的任务。',
+        'not-installed':'启用监控后，自动检查额度和中断任务。',
+    }.get(code,fallback)
