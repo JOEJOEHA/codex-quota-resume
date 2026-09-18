@@ -41,6 +41,7 @@ jobs:
           python scripts/test_macos_redesign.py
           python scripts/test_placeholder.py
           python scripts/test_macos_update_ui.py
+          python scripts/test_macos_actions.py
       - run: python scripts/build_macos.py
       - name: Frozen watcher smoke check
         run: dist/CodexQuotaResume.app/Contents/MacOS/CodexQuotaResume --self-test
