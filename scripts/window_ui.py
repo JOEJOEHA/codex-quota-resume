@@ -18,6 +18,7 @@ class RoundedButton(tk.Button):
         self.fill=bg
         self.padding=(padx,pady)
         self.content_image=image
+        self.mac_surface=None
         super().__init__(parent,text=text,command=command,font=font,fg=fg,
                          bg=parent.cget('bg'),activebackground=parent.cget('bg'),
                          activeforeground=fg,relief='flat',bd=0,highlightthickness=0,
@@ -28,7 +29,21 @@ class RoundedButton(tk.Button):
         self.bind('<Leave>',lambda e:self.redraw())
         self.bind('<FocusIn>',lambda e:self.redraw())
         self.bind('<FocusOut>',lambda e:self.redraw())
+        if sys.platform=='darwin':
+            # Aqua Tk 8.6 ignores flat button surfaces in dark mode. Keep the
+            # native Button command/keyboard semantics, paint its visible face.
+            self.mac_surface=tk.Canvas(self,highlightthickness=0,bd=0,cursor='hand2')
+            self.mac_surface.place(x=0,y=0,relwidth=1,relheight=1)
+            self.mac_surface.bind('<ButtonRelease-1>',self.mac_click)
+            self.mac_surface.bind('<Enter>',lambda e:self.redraw(True))
+            self.mac_surface.bind('<Leave>',lambda e:self.redraw())
         self.redraw()
+
+    def mac_click(self,event):
+        if self.cget('state')!='disabled':
+            self.focus_set()
+            self.invoke()
+        return 'break'
 
     def redraw(self,hover=False):
         font=tkfont.Font(font=self.cget('font'))
@@ -48,6 +63,14 @@ class RoundedButton(tk.Button):
         if content:surface.paste(content,(px,py))
         self.surface=ImageTk.PhotoImage(surface,master=self)
         super().configure(image=self.surface)
+        if self.mac_surface is not None:
+            canvas=self.mac_surface
+            canvas.configure(bg=self.master.cget('bg'))
+            canvas.delete('all')
+            canvas.create_image(0,0,anchor='nw',image=self.surface)
+            if not content:
+                canvas.create_text(width/2,height/2,text=self.cget('text'),font=self.cget('font'),
+                                   fill=self.cget('disabledforeground') if self.cget('state')=='disabled' else self.cget('fg'))
 
     def configure(self,cnf=None,**kwargs):
         if cnf is not None:return super().configure(cnf,**kwargs)
