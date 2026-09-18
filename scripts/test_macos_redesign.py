@@ -55,6 +55,10 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     path=Path(folder)/'plan.json'
     dialog=plan_dialog.show('test-thread',path,lambda p,v:p.write_text(json.dumps(v)),parent=root,task_name='Test task')
     root.update();assert not dialog.overrideredirect()
+    assert root.winfo_width()==root.winfo_screenwidth()-40
+    root.geometry('480x620');root.update()
+    from window_ui import place_beside
+    place_beside(dialog,root);root.update()
     editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
     dialog_theme=dialog.appearance
     for name in ('dark','light'):
