@@ -7,22 +7,18 @@ import platform
 from pathlib import Path
 import re
 import subprocess
-import sys
 import tempfile
 import time
 import urllib.request
 import urllib.error
 import urllib.parse
 
-MACOS_VERSION = '3.1.0bata'
-VERSION = MACOS_VERSION if sys.platform == 'darwin' else '3.0.0-beta.38'
+VERSION = '3.0.0-beta.38'
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'
 
 
 def version(value):
-    if re.fullmatch(r'v?\d+\.\d+\.\d+bata', value):
-        value = value[:-4] + '-beta.0'
     match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?', value)
     if not match:
         return None

@@ -76,12 +76,3 @@ Documents 的 File Provider 会给 bundle 重附 FinderInfo。本轮在非同步
 5 项新增回归通过，涵盖环境差异、符号链接、真实配置差异、相对 CLI 的 PATH 保护，以及重复安装保持 plist 和发送记录。测试已加入 macOS CI。修复版重新构建后通过签名、自检，安装到 `~/Applications/CodexQuotaResume.app`；旧版保存在 `~/Applications/.quota-resume-backup-20260918-101919/CodexQuotaResume.app`。
 
 通过桌面实际点击“启用 / 更新监控”，界面显示“已启用主备监控（每分钟 / 每五分钟）”，指示灯变绿，无原报错。随后用户操作令界面回到暂停状态，已保留。测试未主动发送任务消息。交付 ZIP 为 `CodexQuotaResume-v3.0.0-beta.36-macOS-arm64-agent-fix.zip`，版本显示仍为 beta.36。
-
-
-## 2026-09-18：任务菜单残留与白色主界面
-
-任务选择菜单改为独立 Toplevel，选择、Esc、外部点击、焦点离开及主窗口隐藏时撤回，避免 Canvas 内嵌原生控件残留。主界面改为白底深色文字，调整按钮及 GitHub 图标对比度；圆角改为透明背景的高分辨率抗锯齿绘制。
-
-新增 test_task_picker.py 并加入 macOS CI。独立原生测试应用执行菜单重复开关、选择、Esc、外部点击、主窗口隐藏/恢复，以及已有 macOS UI、附件、光标/取消草稿、更新界面测试，全部通过。像素测试因屏幕录制权限不可用而跳过。compileall、布局测试和 git diff --check 通过。
-
-最终生产构建自检返回 SELF_TEST_OK，安装前后严格签名校验通过。已安装到 ~/Applications/CodexQuotaResume.app；旧版备份为 ~/Applications/.quota-resume-backup-20260918-211913/CodexQuotaResume.app。未修改监控配置或发送任务。安装后的桌面窗口读取连续超时，实际启动及视觉截图验收尚未确认。本次 UI 修改尚未提交或推送到 GitHub。

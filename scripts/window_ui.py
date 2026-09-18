@@ -61,37 +61,26 @@ class RoundedButton(tk.Button):
 
 class TaskPicker(tk.Frame):
     """Task list using the same rounded surfaces as the composer."""
-    def __init__(self,parent,font,light=False):
+    def __init__(self,parent,font):
         super().__init__(parent,bg=parent.cget('bg'))
-        surface='#f3f4f6' if light else '#2b2b2b'
-        foreground='#202124' if light else '#eeeeee'
-        menu_surface='#ffffff' if light else '#242424'
         self.values=[]
         self.index=-1
-        self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle,width_px=374,bg=surface,fg=foreground)
+        self.button=RoundedButton(self,text='选择任务  ▾',font=font,command=self.toggle,width_px=374)
         self.button.pack(fill='x')
-        self.flag=tk.Canvas(self,width=24,height=26,bg=surface,highlightthickness=0)
+        self.flag=tk.Canvas(self,width=24,height=26,bg='#2b2b2b',highlightthickness=0)
         self.flag.create_line(5,3,5,24,fill='#dddddd',width=2)
         self.flag_shape=self.flag.create_polygon(6,3,21,3,17,9,21,15,6,15,fill='#ef5350',outline='')
         self.flag_timer=None
         self.pending=False
         self.bind('<Destroy>',self.cancel_flag,add='+')
-        # A separate native popup is removed by the window compositor on hide.
-        # Embedded Canvas windows can leave stale Aqua backing-store pixels.
-        self.panel=tk.Toplevel(self)
-        self.panel.withdraw()
-        self.panel.overrideredirect(True)
-        self.panel.transient(self.winfo_toplevel())
-        self.panel.configure(bg='systemTransparent' if sys.platform=='darwin' else menu_surface)
-        if sys.platform=='darwin':self.panel.wm_attributes('-transparent',True)
-        canvas=tk.Canvas(self.panel,bg=self.panel.cget('bg'),highlightthickness=0)
-        canvas.pack(fill='both',expand=True)
-        paint_rounded_surface(canvas,374,212,menu_surface,'#dfe3e8' if light else '#383838',14)
-        interior=tk.Frame(self.panel,bg=menu_surface)
-        interior.place(x=10,y=10,width=354,height=192)
-        self.listing=tk.Listbox(interior,bg=menu_surface,fg=foreground,
-                               selectbackground='#e8f0fe' if light else '#383838',
-                               selectforeground='#174ea6' if light else 'white',font=font,relief='flat',bd=0,
+        self.panel=tk.Canvas(parent,width=374,height=212,bg=parent.cget('bg'),highlightthickness=0)
+        self.panel.create_polygon(20,1,354,1,373,1,373,20,373,192,373,211,354,211,
+                                  20,211,1,211,1,192,1,20,1,1,smooth=True,
+                                  fill='#242424',outline='#383838')
+        interior=tk.Frame(self.panel,bg='#242424')
+        self.panel.create_window(10,10,anchor='nw',width=354,height=192,window=interior)
+        self.listing=tk.Listbox(interior,bg='#242424',fg='#eeeeee',selectbackground='#383838',
+                               selectforeground='white',font=font,relief='flat',bd=0,
                                highlightthickness=0,exportselection=False,activestyle='none')
         from tkinter import ttk
         scroll=ttk.Scrollbar(interior,command=self.listing.yview)
@@ -102,20 +91,6 @@ class TaskPicker(tk.Frame):
         self.listing.bind('<Return>',self.choose)
         self.listing.bind('<Escape>',lambda e:self.hide(keyboard=True))
         self.winfo_toplevel().bind('<Button-1>',self.dismiss,add='+')
-        self.winfo_toplevel().bind('<Unmap>',self.parent_hidden,add='+')
-        self.panel.bind('<FocusOut>',self.focus_left,add='+')
-        self.panel.protocol('WM_DELETE_WINDOW',self.hide)
-
-    def parent_hidden(self,event):
-        if event.widget==self.winfo_toplevel():self.hide(restore_focus=False)
-
-    def focus_left(self,event):
-        def check():
-            if not self.winfo_exists() or not self.panel.winfo_exists():return
-            focused=self.focus_get()
-            if focused is None or focused.winfo_toplevel()!=self.panel:
-                self.hide(restore_focus=False)
-        self.after_idle(check)
 
     def cancel_flag(self,event=None):
         if event is not None and event.widget!=self:return
@@ -154,22 +129,16 @@ class TaskPicker(tk.Frame):
 
     def toggle(self):
         if self.panel.winfo_ismapped():self.hide();return
-        self.update_idletasks()
-        x=self.winfo_rootx()
-        y=self.winfo_rooty()-220
-        if y<0:y=self.winfo_rooty()+self.winfo_height()+6
-        self.panel.geometry(f'374x212{x:+d}{y:+d}')
-        self.panel.deiconify()
-        self.panel.lift()
+        self.panel.place(x=self.winfo_x(),y=max(0,self.winfo_y()-220))
+        tk.Misc.lift(self.panel)
         self.listing.selection_clear(0,'end')
         if self.index>=0:
             self.listing.selection_set(self.index);self.listing.activate(self.index);self.listing.see(self.index)
         self.listing.focus_set()
 
-    def hide(self,keyboard=False,restore_focus=True):
-        if not self.panel.winfo_exists():return
-        self.panel.withdraw()
-        if restore_focus:(self.button if keyboard else self.winfo_toplevel()).focus_set()
+    def hide(self,keyboard=False):
+        self.panel.place_forget()
+        (self.button if keyboard else self.winfo_toplevel()).focus_set()
 
     def choose(self,event=None):
         selection=self.listing.curselection()
@@ -182,7 +151,7 @@ class TaskPicker(tk.Frame):
         while widget is not None:
             if widget in (self,self.panel):return
             widget=getattr(widget,'master',None)
-        if self.panel.winfo_ismapped():self.hide(restore_focus=False)
+        if self.panel.winfo_ismapped():self.panel.place_forget()
 
 
 def window_handle(root):
@@ -275,9 +244,9 @@ def minimize(root):
     ctypes.windll.user32.ShowWindow(window_handle(root),6)
 
 
-def window_controls(root,parent,font,on_close=None,on_minimize=None,light=False):
+def window_controls(root,parent,font,on_close=None,on_minimize=None):
     for text,command in [('×',on_close or root.destroy),('—',on_minimize or (lambda:minimize(root)))]:
-        RoundedButton(parent,text=text,command=command,font=font,padx=16,pady=8,bg='#f3f4f6' if light else '#2b2b2b',fg='#3c4043' if light else '#eeeeee').pack(side='right',padx=(6,0))
+        RoundedButton(parent,text=text,command=command,font=font,padx=16,pady=8).pack(side='right',padx=(6,0))
 
 
 def configure_taskbar(root):
@@ -306,17 +275,7 @@ def bind_drag(root, *widgets):
         widget.bind('<B1-Motion>',move)
 
 
-def paint_rounded_surface(canvas,width,height,fill,border,radius=26):
-    scale=3
-    image=Image.new('RGBA',(width*scale,height*scale),(0,0,0,0))
-    draw=ImageDraw.Draw(image)
-    draw.rounded_rectangle((scale,scale,(width-1)*scale,(height-1)*scale),
-                           radius=radius*scale,fill=fill,outline=border,width=scale)
-    canvas.rounded_photo=ImageTk.PhotoImage(image.resize((width,height),Image.Resampling.LANCZOS),master=canvas)
-    canvas.create_image(0,0,anchor='nw',image=canvas.rounded_photo)
-
-
-def rounded_window(root,width,height,surface='#181818',border='#383838'):
+def rounded_window(root,width,height):
     root.window_size=(width,height)
     if sys.platform != 'darwin':ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('CodexQuotaResume.Desktop')
     root.overrideredirect(True)
@@ -327,8 +286,12 @@ def rounded_window(root,width,height,surface='#181818',border='#383838'):
     root.geometry(f'{width}x{height}+{max(0,(root.winfo_screenwidth()-width)//2)}+{max(0,(root.winfo_screenheight()-height)//2)}')
     canvas=tk.Canvas(root,bg=background,highlightthickness=0)
     canvas.pack(fill='both',expand=True)
-    paint_rounded_surface(canvas,width,height,surface,border)
-    body=tk.Frame(root,bg=surface)
+    radius=48
+    canvas.create_polygon(radius,1,width-radius,1,width-1,1,width-1,radius,
+                          width-1,height-radius,width-1,height-1,width-radius,height-1,
+                          radius,height-1,1,height-1,1,height-radius,1,radius,1,1,
+                          smooth=True,fill='#181818',outline='#383838',width=1)
+    body=tk.Frame(root,bg='#181818')
     body.place(x=28,y=22,width=width-56,height=height-44)
     bind_drag(root,canvas,body)
     root.bind('<Map>',lambda event:root.after_idle(lambda:configure_taskbar(root)) if event.widget==root else None,add='+')

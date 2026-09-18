@@ -2,7 +2,6 @@
 import argparse
 import hashlib
 import platform
-import plistlib
 import subprocess
 import sys
 from pathlib import Path
@@ -32,14 +31,6 @@ def main():
                     '--distpath', str(dist), '--workpath', str(build),
                     '--specpath', str(build), str(root / 'scripts/app.py')], check=True, cwd=root)
     bundle = dist / 'CodexQuotaResume.app'
-    from updater import MACOS_VERSION
-    info_path = bundle / 'Contents/Info.plist'
-    with info_path.open('rb') as file:
-        info = plistlib.load(file)
-    info['CFBundleShortVersionString'] = MACOS_VERSION
-    info['CFBundleVersion'] = '3.1.0'
-    with info_path.open('wb') as file:
-        plistlib.dump(info, file)
     # Finder/framework metadata can invalidate PyInstaller's bundle signature (Apple QA1940).
     # Clean only the generated bundle's signing-incompatible attributes, preserving quarantine.
     for attribute in ('com.apple.FinderInfo', 'com.apple.ResourceFork'):
