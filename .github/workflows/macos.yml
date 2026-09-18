@@ -37,6 +37,7 @@ jobs:
         run: |
           python scripts/test_macos_ui.py
           python scripts/test_file_attachments.py
+          python scripts/test_task_picker.py
           python scripts/test_placeholder.py
           python scripts/test_macos_update_ui.py
       - run: python scripts/build_macos.py

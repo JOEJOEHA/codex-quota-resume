@@ -123,42 +123,43 @@ def show():
     open_plans={}
     exiting=[False]
     def close_main():
+        select.hide(restore_focus=False)
         root.withdraw()
     def exit_interface():
         exiting[0]=True
         if open_plans:root.withdraw()
         else:root.destroy()
     root.protocol('WM_DELETE_WINDOW',close_main)
-    frame=rounded_window(root,430,535)
-    footer=tk.Frame(frame,bg='#181818');footer.pack(side='bottom',fill='x',pady=(8,0))
-    tk.Label(footer,text='v'+updater.VERSION,bg='#181818',fg='#999999',font=(FONT_FAMILY,9)).pack(side='left')
+    frame=rounded_window(root,430,535,surface='#ffffff',border='#dfe3e8')
+    footer=tk.Frame(frame,bg='#ffffff');footer.pack(side='bottom',fill='x',pady=(8,0))
+    tk.Label(footer,text='v'+updater.VERSION,bg='#ffffff',fg='#6b7280',font=(FONT_FAMILY,9)).pack(side='left')
     style=ttk.Style(root); style.theme_use('clam')
-    style.configure('TScrollbar',background='#383838',troughcolor='#242424',
-                    bordercolor='#242424',arrowcolor='#aaaaaa',lightcolor='#383838',darkcolor='#383838')
-    style.map('TScrollbar',background=[('active','#494949')])
+    style.configure('TScrollbar',background='#d1d5db',troughcolor='#f3f4f6',
+                    bordercolor='#f3f4f6',arrowcolor='#5f6368',lightcolor='#d1d5db',darkcolor='#d1d5db')
+    style.map('TScrollbar',background=[('active','#9ca3af')])
 
     font=(FONT_FAMILY,11)
-    def label(text,color='#eeeeee',size=11):
-        item=tk.Label(frame,text=text,bg='#181818',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
+    def label(text,color='#202124',size=11):
+        item=tk.Label(frame,text=text,bg='#ffffff',fg=color,font=(FONT_FAMILY,size),anchor='w',justify='left',wraplength=374)
         item.pack(fill='x',pady=(0,8));bind_drag(root,item);return item
-    top=tk.Frame(frame,bg='#181818');top.pack(fill='x',pady=(0,10))
-    title=tk.Label(top,text='Codex 自动续跑',bg='#181818',fg='#eeeeee',font=(FONT_FAMILY,16))
+    top=tk.Frame(frame,bg='#ffffff');top.pack(fill='x',pady=(0,10))
+    title=tk.Label(top,text='Codex 自动续跑',bg='#ffffff',fg='#202124',font=(FONT_FAMILY,16))
     title.pack(side='left')
-    window_controls(root,top,font,on_close=close_main,on_minimize=root.withdraw)
-    monitor_dot=tk.Canvas(top,width=36,height=36,bg='#181818',highlightthickness=0)
+    window_controls(root,top,font,on_close=close_main,on_minimize=close_main,light=True)
+    monitor_dot=tk.Canvas(top,width=36,height=36,bg='#ffffff',highlightthickness=0)
     monitor_dot.pack(side='right',padx=(0,8))
     dot_images={}
     for enabled,color in ((True,'#43c77a'),(False,'#ef5350')):
-        image=Image.new('RGB',(144,144),'#181818')
+        image=Image.new('RGB',(144,144),'#ffffff')
         ImageDraw.Draw(image).ellipse((12,12,131,131),fill=color)
         dot_images[enabled]=ImageTk.PhotoImage(image.resize((36,36),Image.Resampling.LANCZOS),master=root)
     dot=monitor_dot.create_image(0,0,anchor='nw',image=dot_images[False])
     bind_drag(root,top,title,monitor_dot)
-    label('有额度就继续 · 本地监控 · 后续任务支持截图', '#aaaaaa')
+    label('有额度就继续 · 本地监控 · 后续任务支持截图', '#5f6368')
     status=label('正在读取运行状态…',size=14)
-    detail=label('', '#aaaaaa',10)
-    note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#aaaaaa',10)
-    actions=tk.Frame(frame,bg='#181818');actions.pack(fill='x',pady=(2,18))
+    detail=label('', '#5f6368',10)
+    note=label('首次使用请点击“启用 / 更新监控”。关闭此窗口后，计划任务仍会运行。','#5f6368',10)
+    actions=tk.Frame(frame,bg='#ffffff');actions.pack(fill='x',pady=(2,18))
     results=queue.Queue();busy=[False];threads=[]
     def background(job):
         if busy[0]:return
@@ -172,26 +173,28 @@ def show():
         update_button.configure(text='检查中…')
         if sys.platform=='darwin':background(updater.check_macos_update)
         else:background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
-    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5)
+    update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5,bg='#f3f4f6',fg='#3c4043')
     update_button.pack(side='right')
     github_path=Path(__file__).with_name('github-mark.png')
     if not github_path.exists():github_path=Path(__file__).parent.parent/'assets'/'github-mark.png'
     with Image.open(github_path) as icon:
-        github_icon=ImageTk.PhotoImage(icon.resize((16,16),Image.Resampling.LANCZOS),master=root)
+        ink=Image.new('RGBA',icon.size,'#24292f')
+        ink.putalpha(icon.convert('RGBA').getchannel('A'))
+        github_icon=ImageTk.PhotoImage(ink.resize((16,16),Image.Resampling.LANCZOS),master=root)
     github_button=tk.Button(footer,name='github_link',image=github_icon,
         command=lambda:webbrowser.open('https://github.com/joejoeha/codex-quota-resume'),
-        bg='#181818',activebackground='#2b2b2b',bd=0,highlightthickness=0,
+        bg='#ffffff',activebackground='#f3f4f6',bd=0,highlightthickness=0,
         padx=8,pady=7,cursor='hand2',takefocus=True)
     github_button.image=github_icon
     github_button.pack(side='right',padx=(0,12))
     def button(parent,text,command,blue=False):
-        b=RoundedButton(parent,text=text,command=command,bg='#2d6acb' if blue else '#2b2b2b',font=(FONT_FAMILY,10),padx=10)
+        b=RoundedButton(parent,text=text,command=command,bg='#2563eb' if blue else '#f3f4f6',fg='white' if blue else '#202124',font=(FONT_FAMILY,10),padx=10)
         b.pack(side='left',padx=(0,6));return b
     enable_button=button(actions,'启用 / 更新监控',lambda:background(install),True)
     button(actions,'暂停监控',lambda:background(pause))
     button(actions,'打开运行记录',lambda:subprocess.Popen(['/usr/bin/open',str(w.APP_DIR)]) if sys.platform=='darwin' else os.startfile(w.APP_DIR))
     label('选择任务，填写后续需求',size=13)
-    select=TaskPicker(frame,font=font);select.pack(fill='x',pady=(0,12))
+    select=TaskPicker(frame,font=font,light=True);select.pack(fill='x',pady=(0,12))
     def refresh_pending(blink=False):
         index=select.current()
         pending=False
@@ -240,7 +243,7 @@ def show():
             open_plans.pop(thread,None)
             if not open_plans and exiting[0]:root.destroy()
         dialog.bind('<Destroy>',closed,add='+')
-    plan_actions=tk.Frame(frame,bg='#181818');plan_actions.pack(fill='x')
+    plan_actions=tk.Frame(frame,bg='#ffffff');plan_actions.pack(fill='x')
     button(plan_actions,'打开需求输入框',compose,True)
     button(plan_actions,'刷新任务',load_threads)
     def send_saved():
