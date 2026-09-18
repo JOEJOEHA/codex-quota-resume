@@ -45,7 +45,7 @@ def mainloop(root,*args,**kwargs):
             assert target.winfo_rooty()+target.winfo_height()<=root.winfo_rooty()+root.winfo_height()
             target.invoke()
         except Exception as error:
-            errors.append(error);root.destroy()
+            __import__('traceback').print_exc();errors.append(error);root.destroy()
     root.after(200,check)
     return original(root,*args,**kwargs)
 with tempfile.TemporaryDirectory() as directory:
