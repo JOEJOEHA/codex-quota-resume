@@ -25,10 +25,18 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     assert not root.overrideredirect()
     ui.select.set_values(['A very long task title '*15,'Second task'])
     root.update()
+    clicked=[]
+    ui.compose.configure(command=lambda:clicked.append('compose'))
+    ui.compose.mac_surface.event_generate('<ButtonRelease-1>',x=10,y=10);root.update()
+    assert clicked==['compose']
+    ui.send.configure(command=lambda:clicked.append('send'))
     ui.saved({});assert ui.send.cget('state')=='disabled'
+    ui.send.mac_surface.event_generate('<ButtonRelease-1>',x=10,y=10);root.update()
+    assert clicked==['compose']
     ui.saved({'status':'saved','text':'Continue developing'})
     assert ui.compose.cget('text')=='编辑后续任务' and ui.send.cget('state')=='normal'
     ui.state('waiting-quota',True,False)
+    os.environ['QUOTA_RESUME_THEME']='dark'
     ui.appearance.apply('dark');root.update()
     assert ui.frame.cget('bg')==PALETTES['dark']['window']
     assert ui.select.listing.cget('bg')==PALETTES['dark']['card']
