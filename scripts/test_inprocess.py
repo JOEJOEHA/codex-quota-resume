@@ -45,6 +45,8 @@ def loop(root,*args,**kwargs):
             dialog=dialogs[0]
             labels=[w.cget('text') for w in walk(dialog) if isinstance(w,tk.Label)]
             assert any(text.startswith('Integration task\n\n') for text in labels) and thread not in '\n'.join(labels)
+            assert dialog.title()=='Integration task'
+            assert 'Integration task' in labels
             elapsed=time.perf_counter()-started
             assert dialog.winfo_viewable() and dialog.tk is root.tk
             main_rect=wintypes.RECT();child_rect=wintypes.RECT()
@@ -75,7 +77,15 @@ def loop(root,*args,**kwargs):
                     assert right+6<=l or r+6<=left or bottom+6<=t or b+6<=top,rects
             assert all(r[0]>=rects[0][2]+6 for r in rects[1:]) or all(r[2]+6<=rects[0][0] for r in rects[1:])
             long_dialog=others[0]
-            assert long_dialog.title()=='任务输入框'
+            assert long_dialog.title().startswith('很长的任务摘要，不应该占据输入区。 ')
+            heading=next(w for w in walk(long_dialog) if isinstance(w,tk.Label) and w.cget('text').startswith('很长的任务摘要') and w.winfo_name()!='placeholder')
+            assert heading.cget('text').endswith('…')
+            assert heading.winfo_height()<50
+            for action in ('×','—'):
+                control=button(long_dialog,action)
+                assert control.winfo_viewable()
+                assert heading.winfo_rootx()+heading.winfo_width()<=control.winfo_rootx()
+                assert control.winfo_rootx()+control.winfo_width()<=long_dialog.winfo_rootx()+long_dialog.winfo_width()
             long_editor=next(w for w in walk(long_dialog) if isinstance(w,tk.Text))
             assert long_editor.winfo_viewable() and long_editor.winfo_height()>=100
             for action in ('保存','发送','+'):
@@ -88,13 +98,17 @@ def loop(root,*args,**kwargs):
             evidence.parent.mkdir(exist_ok=True)
             x,y=long_dialog.winfo_rootx(),long_dialog.winfo_rooty()
             ImageGrab.grab((x,y,x+long_dialog.winfo_width(),y+long_dialog.winfo_height())).save(evidence)
-            button(others[0],'×').invoke();root.update()
+            with patch.object(plan_dialog.messagebox,'askyesnocancel',return_value=False):
+                button(others[0],'×').invoke()
+            root.update()
             assert dialog.winfo_exists()
             picker.current(0)
             editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
             editor.insert('1.0','Keep draft')
             button(dialog,'↗').invoke();root.update()
             expanded=next(w for w in dialog.winfo_children() if isinstance(w,tk.Toplevel))
+            assert expanded.title()=='Integration task — 编辑后续需求'
+            assert any(isinstance(w,tk.Label) and w.cget('text')=='Integration task' for w in walk(expanded))
             large=next(w for w in walk(expanded) if isinstance(w,tk.Text))
             assert large.get('1.0','end-1c')=='Keep draft' and editor.cget('state')=='disabled'
             large.insert('end',' expanded')
@@ -141,7 +155,8 @@ def loop(root,*args,**kwargs):
             root.after(300,lambda:ready.set(True));root.wait_variable(ready)
             assert root.state()=='withdrawn' and dialog.winfo_exists()
             assert draft.get('1.0','end-1c')=='Keep draft on tray exit'
-            button(dialog,'×').invoke()
+            with patch.object(plan_dialog.messagebox,'askyesnocancel',return_value=False):
+                button(dialog,'×').invoke()
             assert root.tray.closed and not root.tray.active
             print(f'INPROCESS_OK: {elapsed*1000:.0f} ms, same PID, task name, fixed width, expanded editor, 8 images, saved/sent flag, close/save')
         except Exception as error:

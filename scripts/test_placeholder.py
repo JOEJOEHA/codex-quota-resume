@@ -26,10 +26,14 @@ with tempfile.TemporaryDirectory() as folder:
  assert not hint.winfo_ismapped()
  editor.insert('1.0','saved text');dialog.focus_force();root.update()
  assert not hint.winfo_ismapped()
- caption=next(w for w in walk(dialog) if w.winfo_name()=='task_caption')
- assert caption.winfo_ismapped() and caption.cget('text')=='Placeholder test'
+ if sys.platform=='win32':
+  assert not any(w.winfo_name()=='task_caption' for w in walk(dialog))
+  assert any(isinstance(w,tk.Label) and w.cget('text')=='Placeholder test' and w.winfo_ismapped() for w in walk(dialog))
+ else:
+  caption=next(w for w in walk(dialog) if w.winfo_name()=='task_caption')
+  assert caption.winfo_ismapped() and caption.cget('text')=='Placeholder test'
  assert 'Placeholder test' in dialog.title()
- assert any(isinstance(w,tk.Label) and '保存：续跑后 10 秒投递' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog))
+ assert any(isinstance(w,tk.Label) and '保存：续跑后 10 秒投递' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog)) == (sys.platform!='win32')
  editor.focus_force();editor.mark_set('insert','end-1c');root.update()
  before=editor.index('insert')
  x,y,width,height=editor.bbox('1.1')

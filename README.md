@@ -1,7 +1,7 @@
 # Codex Quota Resume · Codex 额度恢复自动续跑
 
 [简体中文](README.md) | [English](README.en.md)
-
+![Codex 自动续跑软件界面](assets/software-windows-transparent.png)
 **Windows Beta / macOS Developer Preview（开发预览）**。macOS 移植和监控配置兼容性修复已合入 `main`，请从主分支继续开发。macOS 尚未完成目标设备及真实额度恢复验收。
 
 [桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](docs/macos.md)
@@ -23,7 +23,9 @@
 
 ## 下载本地软件（推荐）
 
-[下载 Windows EXE（v3.0.0-beta.37）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.37/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [macOS 预览版下载](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
+[下载 Windows EXE（v3.0.0-beta.38）](https://github.com/joejoeha/codex-quota-resume/releases/download/v3.0.0-beta.38/CodexQuotaResume.exe) · [Windows 发布说明](https://github.com/joejoeha/codex-quota-resume/releases/latest) · [macOS 预览版下载](https://github.com/joejoeha/codex-quota-resume/releases/tag/v3.0.0-beta.36)
+
+beta.38 仅更新 Windows：输入窗口顶部显示对应任务标题，长标题自动省略，移除标题下方重复任务名与保存／发送说明；展开编辑窗口也显示任务标题。
 
 M1 / M2 / M3 等 Apple Silicon 芯片选择 `macOS-arm64-preview.zip`；Intel Mac 选择 `macOS-x86_64-preview.zip`。两种架构均已通过 CI 构建，不代表每种芯片或目标设备都已实机验收。macOS 预览仅有 ad-hoc 签名，尚无 Developer ID 签名与 Apple 公证。
 
