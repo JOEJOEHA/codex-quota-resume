@@ -71,8 +71,11 @@ def request_plan_send(thread):
         path=plan_path(thread)
         if not path.exists():raise RuntimeError('此任务没有已保存的需求，请先打开输入框填写。')
         plan=json.loads(path.read_text(encoding='utf-8'))
-        if plan.get('status')!='saved':
+        if plan.get('status') not in ('saved', 'cancelled'):
             raise RuntimeError('任务已交付或发送状态待确认，请勿重复发送。')
+        plan['status']='saved'
+        plan.pop('resumeSendAfter',None)
+        plan.pop('resumeAbortCount',None)
         plan['sendRequested']=True
         write_plan(path,plan)
     return '已请求发送：会话空闲且额度可用时发送。'
@@ -142,6 +145,10 @@ def dispatch_resume(pending):
     except (OSError,ValueError):plan={}
     if plan.get('status')!='saved':
         return dispatch(pending['threadId'],RESUME_MESSAGE,cwd=pending.get('cwd'))
+    # Remember existing cancellations so an abort followed by another turn is
+    # still noticed when the ten-second worker wakes up.
+    try:_,abort_count=session_evidence(pending['path'])
+    except (OSError,ValueError):abort_count=None
     finished=threading.Event()
     accepted=[]
     def followup():
@@ -161,7 +168,8 @@ def dispatch_resume(pending):
             due=accepted[0]+10
             current=json.loads(path.read_text(encoding='utf-8'))
             if current.get('status')!='saved':return
-            current.update(sendRequested=True,resumeSendAfter=due)
+            if abort_count is None:return
+            current.update(sendRequested=True,resumeSendAfter=due,resumeAbortCount=abort_count)
             write_plan(path,current)
             time.sleep(max(0,due-time.time()))
             result=deliver_plan(pending,False)
@@ -214,20 +222,30 @@ def plan_message(plan):
     return text
 
 
+def session_evidence(path):
+    last=None
+    aborts=0
+    with Path(path).open(encoding='utf-8') as stream:
+        for line in stream:
+            record=json.loads(line)
+            event=record.get('payload',{})
+            if record.get('type')=='event_msg':
+                if event.get('type')=='turn_aborted':aborts+=1
+                if event.get('type') in ('task_started','task_complete','turn_aborted'):last=event
+    return last,aborts
+
+
 def deliver_plan(active: dict, dry_run: bool) -> str | None:
     path = plan_path(active['threadId'])
     if not path.exists():
         return None
     plan = json.loads(path.read_text(encoding='utf-8'))
+    if plan.get('status')=='cancelled':return 'followup-cancelled'
     if plan.get('status') not in ('saved', 'queued'):
         return None
     last = None
     try:
-        for line in Path(active['path']).open(encoding='utf-8'):
-            record = json.loads(line)
-            p = record.get('payload', {})
-            if record.get('type') == 'event_msg' and p.get('type') in ('task_started', 'task_complete', 'turn_aborted'):
-                last = p
+        last,aborts=session_evidence(active['path'])
     except (OSError, json.JSONDecodeError):
         return 'followup-waiting-evidence'
     if plan.get('status') == 'queued':
@@ -239,6 +257,18 @@ def deliver_plan(active: dict, dry_run: bool) -> str | None:
             return 'followup-sent'
         return 'followup-queued'
     delayed=plan.get('resumeSendAfter')
+    def cancellation():
+        if delayed and ((last and last.get('type')=='turn_aborted') or
+                        aborts>plan.get('resumeAbortCount',aborts)):
+            if not dry_run:
+                plan.update(status='cancelled',sendRequested=False)
+                plan.pop('resumeSendAfter',None)
+                plan.pop('resumeAbortCount',None)
+                write_plan(path,plan)
+            return 'followup-cancelled'
+    if result:=cancellation():return result
+    if delayed and aborts<plan.get('resumeAbortCount',0):return 'followup-waiting-evidence'
+    if (APP_DIR/'paused.flag').exists():return 'paused'
     if delayed and time.time()<delayed:return 'followup-waiting-delay'
     if not delayed and (not last or last.get('type') != 'task_complete' or last.get('error')):
         return 'followup-waiting-idle'
@@ -255,6 +285,13 @@ def deliver_plan(active: dict, dry_run: bool) -> str | None:
         return 'followup-missing-image'
     if any(not Path(item).is_file() for item in plan.get('files', [])):
         return 'followup-missing-file'
+    # Quota lookup can take time. Check cancellation/pause again before dispatch.
+    if delayed:
+        try:last,aborts=session_evidence(active['path'])
+        except (OSError,ValueError):return 'followup-waiting-evidence'
+        if result:=cancellation():return result
+        if not last or aborts<plan.get('resumeAbortCount',0):return 'followup-waiting-evidence'
+    if (APP_DIR/'paused.flag').exists():return 'paused'
     # Persist before dispatch so interrupted runs never duplicate a user task.
     plan['status'] = 'sending'
     plan['beforeTurnId'] = last.get('turn_id')
@@ -287,6 +324,9 @@ def scan_plans(state, dry_run):
             plan = json.loads(file.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             waiting = waiting or 'followup-waiting-evidence'
+            continue
+        if plan.get('status')=='cancelled':
+            waiting=waiting or 'followup-cancelled'
             continue
         if plan.get('status') in ('sending', 'send-failed'):
             waiting = waiting or ('followup-send-failed' if plan['status'] == 'send-failed' else 'followup-unconfirmed')

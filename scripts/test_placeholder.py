@@ -1,5 +1,5 @@
 """Composer placeholder never becomes saved content; input area is roughly doubled."""
-import tempfile
+import json,tempfile
 from pathlib import Path
 import tkinter as tk
 import plan_dialog
@@ -26,6 +26,22 @@ with tempfile.TemporaryDirectory() as folder:
  assert not hint.winfo_ismapped()
  editor.insert('1.0','saved text');dialog.focus_force();root.update()
  assert not hint.winfo_ismapped()
+ caption=next(w for w in walk(dialog) if w.winfo_name()=='task_caption')
+ assert caption.winfo_ismapped() and caption.cget('text')=='Placeholder test'
+ assert 'Placeholder test' in dialog.title()
+ assert any(isinstance(w,tk.Label) and '保存：续跑后 10 秒投递' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog))
+ editor.focus_force();editor.mark_set('insert','end-1c');root.update()
+ before=editor.index('insert')
+ x,y,width,height=editor.bbox('1.1')
+ editor.event_generate('<Button-1>',x=x+1,y=y+height//2)
+ editor.event_generate('<ButtonRelease-1>',x=x+1,y=y+height//2);root.update()
+ assert editor.index('insert')!=before,'Mouse click did not move caret'
+ x2,y2,width2,height2=editor.bbox('1.5')
+ editor.event_generate('<Button-1>',x=x+1,y=y+height//2)
+ editor.event_generate('<B1-Motion>',x=x2+1,y=y2+height2//2)
+ editor.event_generate('<ButtonRelease-1>',x=x2+1,y=y2+height2//2);root.update()
+ assert editor.tag_ranges('sel'),'Mouse drag did not select text'
+ dialog.focus_force();root.update()
  editor.delete('1.0','end');root.update()
  assert hint.winfo_ismapped()
  assert editor.get('1.0','end-1c')==''
@@ -45,4 +61,15 @@ with tempfile.TemporaryDirectory() as folder:
  assert expand.winfo_rootx()+expand.winfo_width()<actions[0].winfo_rootx()
  print('COMPOSER_LAYOUT_OK',height,dialog.winfo_height())
  dialog.destroy()
+ path=Path(folder)/'cancelled.json'
+ path.write_text(json.dumps({'status':'cancelled','taskName':'Cancelled task','text':'retained draft','images':[],'files':[]}))
+ dialog=plan_dialog.show('00000000-0000-0000-0000-000000000001',path,lambda p,v:p.write_text(json.dumps(v)),parent=root)
+ root.update()
+ editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
+ assert editor.get('1.0','end-1c')=='retained draft'
+ assert 'Cancelled task' in dialog.title()
+ assert any(isinstance(w,tk.Label) and '原任务已取消' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog))
+ next(w for w in walk(dialog) if isinstance(w,tk.Button) and w.cget('text')=='发送').invoke()
+ data=json.loads(path.read_text())
+ assert data['status']=='saved' and data['sendRequested'] and data['text']=='retained draft'
 root.destroy()

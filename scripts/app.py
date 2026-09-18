@@ -169,8 +169,9 @@ def show():
         threading.Thread(target=work,daemon=True).start()
     def check_update():
         if busy[0]:return
-        update_button.configure(text='更新中…')
-        background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
+        update_button.configure(text='检查中…')
+        if sys.platform=='darwin':background(updater.check_macos_update)
+        else:background(lambda:updater.update(w.APP_DIR,lambda text:results.put(('update-progress',text))))
     update_button=RoundedButton(footer,text='检查更新',command=check_update,font=(FONT_FAMILY,9),padx=10,pady=5)
     update_button.pack(side='right')
     github_path=Path(__file__).with_name('github-mark.png')
@@ -197,7 +198,7 @@ def show():
         if 0<=index<len(threads):
             try:
                 plan=json.loads(w.plan_path(threads[index]['id']).read_text(encoding='utf-8'))
-                pending=plan.get('status') in ('saved','sending','send-failed')
+                pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
             except (OSError,ValueError):pass
         select.set_pending(pending,blink=blink)
     def saved_feedback(thread):
@@ -259,6 +260,8 @@ def show():
            'followup-waiting-idle':'已保存，等待原任务结束',
            'followup-waiting-quota':'已保存，等待额度可用',
            'followup-queued':'已交给 Codex，等待后续任务开始',
+           'followup-cancelled':'原任务已取消，后续需求保留为草稿，等待手动确认',
+           'paused':'监控已暂停',
            'followup-waiting-evidence':'已保存，暂时无法读取原任务记录',
            'followup-send-failed':'后续任务发送失败，请查看记录',
            'followup-unconfirmed':'发送结果待确认，请勿重复发送',
@@ -291,6 +294,23 @@ def show():
                                         bg='#21854d' if enabled else '#2d6acb')
             elif kind=='update-progress':
                 note.configure(text=value)
+            elif isinstance(value,dict) and value.get('macosUpdate'):
+                busy[0]=False
+                update_button.configure(text='检查更新')
+                if value['available']:
+                    note.configure(text='发现新版 '+value['version']+'，可从发布页下载。')
+                    availability=('包含当前 Mac 架构的下载包。' if value.get('downloadUrl') else
+                                  '尚未确认当前 Mac 架构的附件，请在发布页查看。')
+                    notes=value.get('notes','').strip()
+                    if len(notes)>600:notes=notes[:600]+'…'
+                    message='发现 '+value['version']+'\n'+availability
+                    if notes:message+='\n\n'+notes
+                    message+='\n\n打开 GitHub 下载页？'
+                    if messagebox.askyesno('发现新版本',message,parent=root):
+                        webbrowser.open(value['releaseUrl'])
+                else:
+                    note.configure(text=('GitHub API 限流；未发现更新的正式版，预览版请查看发布页。'
+                                         if value.get('limited') else '未发现更新的发布版本。'))
             elif isinstance(value,dict) and 'updated' in value:
                 busy[0]=False
                 update_button.configure(text='检查更新')
@@ -344,9 +364,17 @@ def main():
     parser.add_argument('--apply-update',action='store_true')
     args=parser.parse_args()
     if args.doctor:
-        if sys.platform != 'darwin':raise RuntimeError('--doctor requires macOS')
-        import macos
-        print(json.dumps(macos.doctor(w),ensure_ascii=False,indent=2))
+        try:
+            if sys.platform != 'darwin':
+                result={'ok':False,'errors':{'platform':{'message':'--doctor requires macOS'}}}
+            else:
+                import macos
+                result=macos.doctor(w)
+        except Exception as error:
+            result={'ok':False,'errors':{'doctor':{'message':'Diagnostics could not be completed.',
+                                               'type':type(error).__name__}}}
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        if not result['ok']:raise SystemExit(1)
     elif args.apply_update:
         if sys.platform != 'win32':raise RuntimeError('Automatic installation currently requires Windows')
         w.self_test()

@@ -18,19 +18,21 @@ Download from [Releases](https://github.com/JOEJOEHA/codex-quota-resume/releases
 
 **macOS development source is on [`macos-port`](https://github.com/JOEJOEHA/codex-quota-resume/tree/macos-port), with [draft PR #1](https://github.com/JOEJOEHA/codex-quota-resume/pull/1). `main` does not yet contain the port.** Read the [handoff](docs/macos-handoff.md) before starting.
 
+See [macOS development](docs/macos.md) for source setup, building and local validation. This branch discovers the CLI in `Codex.app` or a `ChatGPT.app` bundle that includes Codex, including Finder launches without the terminal's PATH. `--doctor` reports each compatibility check, preserves completed checks on failure and returns a nonzero exit status when verification is incomplete.
+
 ## Behavior
 
 - The primary watcher checks every 60 seconds; an independent backup checks every 300 seconds. Both share a process lock and send records.
 - Only explicit quota interruptions of unfinished work qualify. Zero remaining quota alone, normal completion and ordinary network errors do not trigger resumption. Live quota is checked before sending.
 - `codex exec resume` continues the original session. Only a desktop writer conflict triggers a `codex queue` fallback. Queue acceptance is not task completion; subsequent state is still checked. No new session, model change or quota purchase is initiated.
-- Save follow-up text, images and ordinary files without sending immediately. Follow-ups require completion of the original task resumed by the watcher, the `[QUOTA_RESUME_GOAL_COMPLETE]` marker and available quota. A normal turn end, cancellation or request for user input is insufficient.
+- Save follow-up text, images and ordinary files without sending immediately. From beta.25, saved follow-ups are queued at least ten seconds after the resume request is accepted, subject to live quota availability. They do not wait for the original task to finish or emit a completion marker. Without a resume event, Save only stores the request. If the resumed turn is cancelled before delivery, the draft is retained without automatic replay; explicitly save or send it again to rearm delivery.
 - Attachments are copied to local storage. Images have no fixed six-image limit; previews scroll horizontally. Click an image to remove it; double-click a file or press Delete to remove it.
 - Dark rounded main/composer windows are 430 × 535. The expanded editor is 760 × 620 and returns its text on close. A saved follow-up flag flashes red/green five times, remains red until handed to Codex and is restored after restart.
 - Composers show task names, reuse open drafts in the same process, and sit beside the main window. Closing/minimizing the main window leaves a tray/menu-bar icon. Exiting the interface does not stop monitoring or silently discard open drafts.
 
 Monitoring makes no model calls. Resumed work and follow-ups consume normal Codex quota.
 
-“保存后续任务” (Save Follow-up) keeps the completion gates above. “现在发送 ↑” (Send Now) explicitly requests a new instruction on the next monitor check once the session has ended normally and live quota is available; this explicit action does not require a prior quota interruption or completion marker. Both watchers scan saved plans independently of the current resume record and expose waiting reasons. If the desktop owns the session and the CLI explicitly rejects queued image attachments, the original session receives the copied images' local paths with the text so it can open them. Queue acceptance is tracked separately from observed startup and is never retried blindly.
+“现在发送 ↑” (Send Now) and “发送已存任务” (Send Saved Task) explicitly request a new instruction on the next monitor check once the session has ended normally and live quota is available; this explicit action does not require a prior quota interruption or completion marker. Both watchers scan saved plans and expose waiting reasons. If the CLI explicitly rejects queued image attachments, the original session receives the copied images' local paths with the text so it can open them. Queue acceptance is tracked separately from observed startup and is never retried blindly.
 
 ## Windows installation and controls
 
@@ -103,3 +105,5 @@ The running GUI checks roughly every five seconds for an explicit quota interrup
 ### Follow-up delivery after resuming
 
 Saved follow-ups are requested in the same conversation ten seconds after the resume request is accepted, without waiting for a completion marker or for the running turn to finish. Live quota is still checked. Queued or delivered follow-ups are never replayed. Without a resume event, Save only stores the request; use Send now or Send saved task to submit explicitly.
+
+The macOS preview can check GitHub releases and open the download page while preserving the running app and drafts. Installation remains manual.

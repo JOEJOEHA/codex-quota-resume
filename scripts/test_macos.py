@@ -15,6 +15,20 @@ with tempfile.TemporaryDirectory() as folder:
     exe.chmod(0o700)
     with patch.dict(os.environ, {'CODEX_EXECUTABLE': str(exe)}):
         assert m.find_codex() == str(exe)
+    # Finder does not inherit the shell PATH; either desktop app can supply the CLI.
+    desktop_clis = [
+        '/Applications/Codex.app/Contents/Resources/codex',
+        str(root/'Applications/Codex.app/Contents/Resources/codex'),
+        '/Applications/ChatGPT.app/Contents/Resources/codex',
+        str(root/'Applications/ChatGPT.app/Contents/Resources/codex'),
+    ]
+    with patch.dict(os.environ, {'PATH': '/usr/bin:/bin'}, clear=True), \
+         patch.object(m.shutil, 'which', return_value=None),patch.object(Path, 'home', return_value=root):
+        for index, expected in enumerate(desktop_clis):
+            available = desktop_clis[index:]
+            with patch.object(Path, 'is_file', autospec=True, side_effect=lambda path: str(path) in available), \
+                 patch.object(m.os, 'access', side_effect=lambda path, mode: str(path) in available):
+                assert m.find_codex() == expected
     job = m.agent_plist(m.LABELS[0], 60, ['/App Folder/app', '--monitor'], root, str(exe))
     assert plistlib.loads(plistlib.dumps(job)) == job
     assert job['ProgramArguments'] == ['/App Folder/app', '--monitor']

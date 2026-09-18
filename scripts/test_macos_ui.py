@@ -1,5 +1,6 @@
 """macOS GUI smoke test with native menu bar and mocked Codex responses."""
 import json
+import os
 import sys
 import tempfile
 import tkinter as tk
@@ -69,18 +70,21 @@ def mainloop(root):
                 try:
                     preview=next(x for x in walk(dialog) if isinstance(x,tk.Canvas) and x.find_withtag('thumbnail'))
                     assert len(preview.find_withtag('thumbnail'))==7 and preview.winfo_ismapped()
-                    output = Path('build/macos-ui.png')
-                    output.parent.mkdir(exist_ok=True)
-                    screenshot=ImageGrab.grab()
-                    screenshot.save(output)
-                    sx,sy=screenshot.width/root.winfo_screenwidth(),screenshot.height/root.winfo_screenheight()
-                    mx,my=root.winfo_rootx(),root.winfo_rooty()
-                    main_pixels=screenshot.crop((int((mx+28)*sx),int((my+22)*sy),int((mx+402)*sx),int((my+491)*sy))).convert('RGB')
-                    assert sum(count for count,(r,g,b) in main_pixels.getcolors(main_pixels.width*main_pixels.height) if min(r,g,b)>150)>200, 'Main window content was not painted'
-                    x,y=preview.winfo_rootx(),preview.winfo_rooty()
-                    region=screenshot.crop((int(x*sx),int(y*sy),int((x+preview.winfo_width())*sx),int((y+preview.winfo_height())*sy))).convert('RGB')
-                    colors=region.getcolors(region.width*region.height)
-                    assert sum(count for count,(r,g,b) in colors if r<=8 and 120<=g<=136 and b<=8)>1000, 'Thumbnails were not painted'
+                    if os.environ.get('QUOTA_RESUME_SKIP_SCREEN_CAPTURE') == '1':
+                        print('MACOS_UI_PIXELS_SKIPPED: screen capture explicitly disabled; rendering not verified')
+                    else:
+                        output = Path('build/macos-ui.png')
+                        output.parent.mkdir(exist_ok=True)
+                        screenshot=ImageGrab.grab()
+                        screenshot.save(output)
+                        sx,sy=screenshot.width/root.winfo_screenwidth(),screenshot.height/root.winfo_screenheight()
+                        mx,my=root.winfo_rootx(),root.winfo_rooty()
+                        main_pixels=screenshot.crop((int((mx+28)*sx),int((my+22)*sy),int((mx+402)*sx),int((my+491)*sy))).convert('RGB')
+                        assert sum(count for count,(r,g,b) in main_pixels.getcolors(main_pixels.width*main_pixels.height) if min(r,g,b)>150)>200, 'Main window content was not painted'
+                        x,y=preview.winfo_rootx(),preview.winfo_rooty()
+                        region=screenshot.crop((int(x*sx),int(y*sy),int((x+preview.winfo_width())*sx),int((y+preview.winfo_height())*sy))).convert('RGB')
+                        colors=region.getcolors(region.width*region.height)
+                        assert sum(count for count,(r,g,b) in colors if r<=8 and 120<=g<=136 and b<=8)>1000, 'Thumbnails were not painted'
                     preview.event_generate('<Motion>',x=40,y=30)
                     preview.event_generate('<Button-1>',x=40,y=30)
                     root.update()
@@ -119,6 +123,7 @@ def mainloop(root):
 with tempfile.TemporaryDirectory() as directory:
     with patch.multiple(app.w, APP_DIR=Path(directory), STATE_PATH=Path(directory)/'state.json'), \
          patch.object(app.w.codex_status,'connection',connection),patch.object(app.w,'find_codex',return_value='mock'), \
+         patch.object(app.w,'latest_candidate',return_value=None), \
          patch.object(app,'monitor_indicator',return_value=('test','#43c77a',True)),patch.object(tk.Tk,'mainloop',mainloop):
         app.show()
 assert not errors, errors

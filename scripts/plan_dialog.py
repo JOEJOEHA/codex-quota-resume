@@ -16,7 +16,7 @@ from window_ui import FONT_FAMILY
 def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, on_saved=None):
     if parent is None and sys.platform != 'darwin':ctypes.windll.shcore.SetProcessDpiAwareness(1)
     old = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
-    saved = old.get('status') in ('saved', 'send-failed')
+    saved = old.get('status') in ('saved', 'send-failed', 'cancelled')
     attachments = list(old.get('images', [])) if saved else []
     files = list(old.get('files', [])) if saved else []
     root = tk.Toplevel(parent) if parent is not None else tk.Tk()
@@ -41,7 +41,21 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     window_controls(root,top,font,on_close=lambda:close_draft())
     bind_drag(root, top, title)
     caption = ' '.join((task_name or old.get('taskName') or '当前任务').split())
+    root.title(caption + ' — 任务输入框')
     caption = caption[:60] + ('…' if len(caption)>60 else '')
+    task_label=tk.Label(body,name='task_caption',text=caption,bg='#181818',fg='#dddddd',
+                        font=(FONT_FAMILY,11),anchor='w',height=1)
+    task_label.pack(fill='x',pady=(6,0))
+    caption_font=tkfont.Font(font=task_label.cget('font'))
+    def fit_caption(event):
+        text=caption
+        while text and caption_font.measure(text+'…')>event.width-4:text=text[:-1]
+        task_label.configure(text=text+('…' if text!=caption else ''))
+    task_label.bind('<Configure>',fit_caption)
+    rules=label(body,'保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
+    rules.pack(fill='x',pady=(2,0))
+    if old.get('status')=='cancelled':
+        label(body,'原任务已取消，草稿保留；重新保存或发送后才会投递。','#e7b66a',9).pack(fill='x')
     hint_text = 'Ctrl+V 粘贴截图 · Ctrl+Enter 保存 · 点击图片 / 双击文件移除'
     if sys.platform == 'darwin':hint_text = '⌘V 粘贴图片 / 文件 · ⌘Enter 保存 · 点击图片 / 双击文件移除'
     hint_text = '保存：续跑请求后 10 秒发送 · 现在发送：空闲且有额度时发送\n\n' + hint_text
@@ -87,7 +101,8 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
     def begin_input(event=None):
         hint.place_forget()
         editor.focus_set()
-        return 'break'
+        # Text's class binding must still position the caret and start selection.
+        if event is not None and event.widget==hint:return 'break'
     def changed(event=None):
         editor.edit_modified(False)
         refresh_placeholder()
@@ -199,10 +214,11 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if expanded[0] is not None:
             expanded[0].deiconify();expanded[0].lift();return
         window=tk.Toplevel(root)
-        window.title('编辑后续需求')
+        window.title(caption+' — 编辑后续需求')
         panel=rounded_window(window,760,620)
         header=tk.Frame(panel,bg='#181818');header.pack(fill='x',pady=(0,12))
         heading=label(header,'编辑后续需求',size=16);heading.pack(side='left')
+        label(panel,caption,size=11).pack(fill='x',pady=(0,6))
         window_controls(window,header,font,on_close=collapse_editor)
         bind_drag(window,header,heading)
         large=tk.Text(panel,bg='#2b2b2b',fg='#f3f3f3',insertbackground='white',

@@ -1,5 +1,11 @@
 # macOS 移植进度（2026-09-16）
 
+## 本地 Mac 续开发（2026-09-17） / Local Mac continuation
+
+已重新获取并同步 `macos-port` 的 `6f48493`（beta.25），保留 ChatGPT.app CLI 查找、结构化 doctor、非同步构建目录及签名修复。M2 / macOS 26.3 上的共享回归、8 项 doctor 测试、隔离原生 UI/附件功能测试、打包签名与自检通过。截图像素检查显式跳过；真实额度周期和持久 LaunchAgent 验收仍未完成。详见 [本地更新与验证记录](docs/macos-local-validation.md)。
+
+Synced beta.25 while retaining local macOS fixes. Offline regressions, native functional UI/file checks, signing and the frozen self-test passed; screen pixels and real quota/LaunchAgent acceptance remain incomplete. See the linked validation record. The historical upstream notes below are retained for context.
+
 当前阶段：开发预览已构建，尚未完成目标 Mac 和真实额度恢复验收。不得输出整体完成标记。
 
 ## 源码与交付
@@ -61,3 +67,8 @@ The latest Windows changes are synchronized to macos-port. macOS packages remain
 
 
 Release verification: v3.0.0-beta.25 is now public and Latest. Windows EXE, macOS arm64 and x86_64 ZIPs, and SHA256SUMS.txt are uploaded. Both macOS jobs in CI 35164446739 passed; downloaded ZIP hashes match CI checksums. This supersedes the earlier draft/building status above.
+
+
+## 2026-09-17 local macOS beta.36 update
+
+Fast-forwarded macos/device-validation to upstream macos-port 7365671, preserving the local CLI discovery, doctor, build signing and native test fixes. Added persistent cancellation of delayed follow-ups (including an abort followed by another turn between polls), a pause recheck before delivery, restored Text mouse caret/selection bindings, persistent composer task/rule labels and read-only Mac release checks with a download-page action. New cancellation, updater and native UI regression tests are included in macOS CI. See docs/macos-local-validation.md for measured validation and limits; this is an unpublished local build.
