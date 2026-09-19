@@ -42,3 +42,19 @@
 - 安装包 `CodexQuotaResume-v3.1.0beta-macOS-arm64-preview-ui-qa2.zip`，SHA256：`e85d007c50be21df6eabdf767d58331c6ab57f122e7a60e75042004ff3bcf955`。
 
 最终状态：第二轮代码修正完成，自动回归通过，已安装与推送 `MacOS-version`。版本仍为 `v3.1.0beta · Developer Preview`，目标设备人工验收未完成。安装不会替换已运行进程的界面；需退出旧界面后重新打开应用才能看到本轮改动。
+
+## 任务选择闪退修复（2026-09-19）
+
+用户在本机点击任务选择时闪退。系统崩溃报告 `CodexQuotaResume-2026-09-18-225151.ips` 指向 `PyEval_RestoreThread`：Python 3.14 / Tk 9 的按钮回调进入 PyObjC `NSMenu.popUpMenuPositioningItem...`，AppKit 菜单跟踪期间又重入 Tcl/Tk 事件，触发进程 `SIGABRT`。第二轮 QA 中直接调用 AppKit 菜单的方案已撤回。
+
+现在通过 Tk `Menu.tk_popup` 打开 macOS Aqua 菜单，由 Tcl/Tk 自己管理系统菜单跟踪与 Python 回调；不再从 Tk 回调进入 PyObjC 的嵌套菜单事件循环。菜单沿用任务索引与现有选择行为，未改动监控、保存或发送业务逻辑。长任务名称继续按字体宽度省略。CI 的菜单条目与选择回调用有界测试；无人值守 CI 不能模拟真实鼠标跟踪，因此本机物理点击是否仍崩溃必须在重新打开新包后验收。
+
+已验证提交 `48fa558d6f17fd97044ca3ed00ea889beae53a58`：
+
+- [macOS CI](https://github.com/joejoeha/codex-quota-resume/actions/runs/35426698536)：macOS arm64 / Python 3.13、arm64 / Python 3.14、Intel / Python 3.13 均通过，包括原生 GUI 与冻结程序自检。
+- [Windows CI](https://github.com/joejoeha/codex-quota-resume/actions/runs/35426698550)：通过。
+- 本地已有 macOS 合同、版本、排放、延迟投递、取消回归通过；构建包严格签名检查与冻结自检通过。
+- 已安装至 `/Users/zhantaorui/Applications/CodexQuotaResume.app`；旧安装备份至 `/Users/zhantaorui/Applications/.quota-menu-crash-backup-20260919-143131/CodexQuotaResume.app`。
+- 修复包 SHA256：`164681ba9caf2dee57e5ad29a8061e6cd669f05317a9a5630417a9a4e9108946`。版本仍为 `v3.1.0beta` Developer Preview。
+
+此前文档中的 NSMenu 说明保留为第二轮历史记录，以上修复取代了该实现。安装后的新界面需要退出旧进程再重新打开；本次未强制结束用户进程或触碰真实监控配置。
