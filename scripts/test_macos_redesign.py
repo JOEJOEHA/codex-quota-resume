@@ -22,7 +22,7 @@ def walk(widget):
 def button(root,text):return next(w for w in walk(root) if isinstance(w,tk.Button) and w.cget('text')==text)
 
 with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_THEME='light'):
-    root=tk.Tk();ui=build(root,'3.1.0beta',root.withdraw);root.update()
+    root=tk.Tk();ui=build(root,'3.1.5beta',root.withdraw);root.update()
     assert not root.overrideredirect()
     ui.select.set_values(['A very long task title '*15,'Second task'])
     root.update()

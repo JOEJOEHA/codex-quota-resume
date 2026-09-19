@@ -1,7 +1,7 @@
 # Codex Quota Resume · Codex 额度恢复自动续跑
 
 [简体中文](README.md) | [English](README.en.md)
-![macOS v3.1.0beta 浅色界面（模拟任务）](assets/software-macos-light.png)
+![macOS v3.1.5beta 浅色界面（模拟任务）](assets/software-macos-light.png)
 **Windows Beta / macOS Developer Preview（开发预览）**。macOS 移植和监控配置兼容性修复已合入 `main`，macOS 后续开发在 `MacOS-version` 分支进行。macOS 尚未完成目标设备及真实额度恢复验收。
 
 [桌面版下载 / Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [参与贡献 / Contributing](CONTRIBUTING.md) · [给朋友的 Codex 交接 Prompt / macOS Handoff](docs/macos-handoff.md) · [macOS 构建与验收](docs/macos.md)
@@ -10,9 +10,9 @@
 
 **这是测试版，不保证所有 Codex 版本和异常场景都能自动恢复。** 已测试实时查询、后台直接续跑、失败处理及防重复；尚未完成新版在真实额度耗尽—恢复周期中的验收。
 
-## macOS Developer Preview · v3.1.0beta
+## macOS Developer Preview · v3.1.5beta
 
-macOS 开发请使用 `MacOS-version` 分支。本版本仍为 Developer Preview，尚未完成真实额度恢复与全部目标设备验收。构建包见 [MacOS-version Actions](https://github.com/joejoeha/codex-quota-resume/actions/workflows/macos.yml?query=branch%3AMacOS-version)，修改与验证清单见 [v3.1.0beta 验证记录](docs/macos-v3.1.0beta-validation.md)。
+macOS 开发请使用 `MacOS-version` 分支。本版本仍为 Developer Preview，尚未完成真实额度恢复与全部目标设备验收。构建包见 [MacOS-version Actions](https://github.com/joejoeha/codex-quota-resume/actions/workflows/macos.yml?query=branch%3AMacOS-version)，修改与验证清单见 [v3.1.5beta 验证记录](docs/macos-v3.1.5beta-validation.md)。
 
 - 重构 macOS UI / UX，主窗口和后续任务编辑器统一支持系统 Light / Dark 外观，打开期间自动跟随主题变化。
 - 状态胶囊区分监控、额度等待、准备续跑、正在续跑、暂停和异常，弱化最近检查等辅助信息。

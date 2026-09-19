@@ -13,7 +13,7 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-VERSION = '3.1.0beta'
+VERSION = '3.1.5beta'
 MACOS_VERSION = VERSION  # Build metadata derives from the same version source.
 REPO = 'joejoeha/codex-quota-resume'
 ASSET = 'CodexQuotaResume.exe'

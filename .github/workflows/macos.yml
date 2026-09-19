@@ -1,4 +1,4 @@
-name: macOS 3.1.0beta
+name: macOS 3.1.5beta
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -53,7 +53,7 @@ jobs:
         run: dist/CodexQuotaResume.app/Contents/MacOS/CodexQuotaResume --self-test
       - uses: actions/upload-artifact@v4
         with:
-          name: macOS-3.1.0beta-${{ matrix.os }}-py${{ matrix.python }}
+          name: macOS-3.1.5beta-${{ matrix.os }}-py${{ matrix.python }}
           path: |
             dist/*-preview.zip
             dist/*.sha256

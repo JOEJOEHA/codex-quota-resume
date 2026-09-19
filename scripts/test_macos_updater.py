@@ -20,6 +20,9 @@ class UpdateTests(unittest.TestCase):
             return result
 
     def test_beta_version(self):
+        self.assertEqual(u.VERSION,'3.1.5beta')
+        self.assertEqual(u.version('v'+u.VERSION),u.version('3.1.5-beta.0'))
+        self.assertGreater(u.version(u.VERSION),u.version('3.1.0beta'))
         self.assertEqual(u.version('v3.1.0beta'), u.version('3.1.0-beta.0'))
         self.assertEqual(u.version('v3.1.0bata'), u.version('3.1.0-beta.0'))
         self.assertGreater(u.version('3.1.0bata'), u.version('3.0.0-beta.38'))

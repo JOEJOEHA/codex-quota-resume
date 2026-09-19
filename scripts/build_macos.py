@@ -39,7 +39,7 @@ def main():
     info['CFBundleShortVersionString'] = MACOS_VERSION[:-4]
     info['CodexQuotaResumeVersion'] = MACOS_VERSION
     info['CFBundleGetInfoString'] = 'v' + MACOS_VERSION + ' · macOS Developer Preview'
-    info['CFBundleVersion'] = '3.1.0'
+    info['CFBundleVersion'] = MACOS_VERSION[:-4]
     with info_path.open('wb') as file:
         plistlib.dump(info, file)
     # Finder/framework metadata can invalidate PyInstaller's bundle signature (Apple QA1940).

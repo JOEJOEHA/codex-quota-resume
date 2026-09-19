@@ -6,7 +6,7 @@ A local desktop utility that resumes unfinished Codex tasks interrupted by expli
 
 [Downloads](https://github.com/JOEJOEHA/codex-quota-resume/releases/latest) · [Contributing](CONTRIBUTING.md) · [macOS Codex handoff prompt (中文 / English)](docs/macos-handoff.md)
 
-## macOS Developer Preview · v3.1.0beta
+## macOS Developer Preview · v3.1.5beta
 
 Use the `MacOS-version` branch for macOS development. This remains a Developer Preview, pending real quota-recovery and target-device acceptance.
 
@@ -14,9 +14,9 @@ Use the `MacOS-version` branch for macOS development. This remains a Developer P
 - Improved status presentation, redesigned follow-up task workflow, cleaner task editor and improved button hierarchy.
 - Improved macOS window behavior with native title bars and general UI consistency improvements.
 - Unified attachment picker, bounded image/file previews and individual removal. Existing watcher, persistence, delayed sending and attachment formats remain in use.
-- Apple Silicon and Intel build configurations are retained. [Build artifacts](https://github.com/joejoeha/codex-quota-resume/actions/workflows/macos.yml?query=branch%3AMacOS-version) · [Validation record](docs/macos-v3.1.0beta-validation.md)
+- Apple Silicon and Intel build configurations are retained. [Build artifacts](https://github.com/joejoeha/codex-quota-resume/actions/workflows/macos.yml?query=branch%3AMacOS-version) · [Validation record](docs/macos-v3.1.5beta-validation.md)
 
-![macOS v3.1.0beta Dark appearance with mock tasks](assets/software-macos-dark.png)
+![macOS v3.1.5beta Dark appearance with mock tasks](assets/software-macos-dark.png)
 
 ## Downloads and status
 
