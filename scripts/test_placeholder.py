@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as folder:
  if sys.platform=='win32':assert add.master.cget('bg')=='#2b2b2b'
  assert add.winfo_rooty()>editor.winfo_rooty()+editor.winfo_height()
  assert not any(w.cget('text')=='\u622a\u56fe' for w in buttons)
- actions=[w for w in buttons if w.cget('text') in ('\u4fdd\u5b58','\u53d1\u9001')]
+ actions=[w for w in buttons if w.cget('text') in ('\u4fdd\u5b58','\u53d1\u9001','请求发送')]
  assert len(actions)==2
  assert actions[0].winfo_rooty()==actions[1].winfo_rooty()
  assert actions[0].winfo_width()==actions[1].winfo_width()
