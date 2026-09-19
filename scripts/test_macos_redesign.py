@@ -36,6 +36,9 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     assert clicked==['compose']
     ui.saved({'status':'saved','text':'Continue developing'})
     assert ui.compose.cget('text')=='编辑后续任务' and ui.send.cget('state')=='normal'
+    ui.saved({'status':'saved','text':'Continue developing','sendRequested':True})
+    assert ui.send.cget('state')=='disabled' and ui.send.cget('text')=='已请求发送'
+    ui.saved({'status':'saved','text':'Continue developing'})
     ui.state('waiting-quota',True,False)
     ui.status.configure(text=status_detail('waiting-quota','等待额度恢复'))
     ui.detail.configure(text='最近检查：21:27:18')
@@ -86,7 +89,7 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     root.update()
     editor=next(w for w in walk(dialog) if isinstance(w,tk.Text))
     assert editor.get('1.0','end-1c')=='Saved follow-up'
-    button(dialog,'发送').invoke();root.update()
+    button(dialog,'请求发送').invoke();root.update()
     assert json.loads(path.read_text())['sendRequested']
     root.destroy()
 print('MACOS_REDESIGN_OK: native titles, theme transition, saved/empty card, resized layout, mixed attachments, save/reload/send')

@@ -38,7 +38,7 @@ def build(root,version,close_main):
     preview=label(card,'保存后，后续要求会在原任务结束且有额度时发送。',11,bg='card');preview.configure(wraplength=380,anchor='nw');preview.pack(fill='both',expand=True,pady=(0,16))
     plan_actions=box(card,'card');plan_actions.pack(side='bottom',fill='x',before=preview)
     compose=button(plan_actions,'+ 添加后续任务',primary=True);compose.pack(side='left',padx=(0,8))
-    send=button(plan_actions,'立即发送');send.pack(side='right')
+    send=button(plan_actions,'请求发送');send.pack(side='right')
     note=label(frame,'关闭窗口后，后台监控继续运行。',9,role='secondary');note.configure(wraplength=420);note.pack(fill='x',pady=(12,8))
     footer=box(frame);footer.pack(fill='x')
     label(footer,'v'+version,9,role='secondary').pack(side='left')
@@ -62,12 +62,22 @@ def build(root,version,close_main):
         render_pill()
     def saved(plan):
         pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
-        summary.configure(text=('已保存 1 条后续要求'+(' · 含附件' if plan.get('images') or plan.get('files') else '')) if pending else '尚未添加后续要求')
-        content=' '.join(plan.get('text','').split()) if pending else ''
+        requested=pending and plan.get('sendRequested')
+        status=plan.get('status')
+        if status=='sent':heading='后续要求已发送'
+        elif status=='queued':heading='已交给 Codex，等待开始'
+        elif status=='sending':heading='正在发送，请勿重复点击'
+        elif status=='send-failed':heading='发送失败，请查看运行记录'
+        elif requested:heading='已请求发送 · 等待任务空闲和额度'
+        elif pending:heading='已保存 1 条后续要求'+(' · 含附件' if plan.get('images') or plan.get('files') else '')
+        else:heading='尚未添加后续要求'
+        summary.configure(text=heading)
+        content=' '.join(plan.get('text','').split()) if pending or status in ('sent','queued') else ''
         preview.configure(text=(content[:96]+('…' if len(content)>96 else '')) or ('包含图片或文件附件' if pending else '保存后，后续要求会在原任务结束且有额度时发送。'))
         compose.configure(text='编辑后续任务' if pending else '+ 添加后续任务',state='normal' if select.values else 'disabled')
         if not select.values:
             summary.configure(text='暂未载入任务')
             preview.configure(text='点击右上方刷新，选择任务后再添加后续要求。')
-        send.configure(state='normal' if pending else 'disabled')
+        send.configure(text='已请求发送' if requested else '请求发送',
+                       state='normal' if pending and not requested and status in ('saved','cancelled') else 'disabled')
     return SimpleNamespace(frame=frame,status=status,detail=detail,note=note,enable=enable,pause=pause,logs=logs,select=select,compose=compose,refresh=refresh,send=send,update=update,github=github,state=state,saved=saved,appearance=appearance)

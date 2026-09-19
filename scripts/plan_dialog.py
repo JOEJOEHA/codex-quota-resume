@@ -74,7 +74,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
             while text and caption_font.measure(text+'…')>event.width-4:text=text[:-1]
             task_label.configure(text=text+('…' if text!=caption else ''))
         task_label.bind('<Configure>',fit_caption)
-        rules=label(body,'保存后等待自动发送 · 发送时会检查任务和额度' if mac_ui else '保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
+        rules=label(body,'保存后等待自动发送 · 请求发送需任务空闲和额度可用' if mac_ui else '保存：续跑后 10 秒投递 · 发送：空闲时投递', '#aaaaaa',9)
         rules.pack(fill='x',pady=(2,0))
     if old.get('status')=='cancelled':
         label(body,'原任务已取消，草稿保留；重新保存或发送后才会投递。','#e7b66a',9).pack(fill='x')
@@ -344,6 +344,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         if menu.winfo_ismapped():hide_menu();add_button.focus_set()
         else:close_draft()
     action_width=(tkfont.Font(font=font).measure('保存后续任务 ↑')+28)//2
+    if mac_ui:action_width=max(action_width,tkfont.Font(font=font).measure('请求发送')+24)
     actions=tk.Frame(body if mac_ui else input_area,bg='#181818' if mac_ui else '#2b2b2b')
     if mac_ui:
         actions.pack(side='bottom',fill='x',pady=(16,0),before=preview_area)
@@ -353,7 +354,7 @@ def show(thread, path, write_plan, on_ready=None, parent=None, task_name=None, o
         cancel_button=button(actions,'取消',close_draft)
         cancel_button.pack(side='left')
     save_button=button(actions,'保存',save,width_px=action_width)
-    send_button=button(actions,'发送',lambda:save(send_now=True),True,width_px=action_width)
+    send_button=button(actions,'请求发送' if mac_ui else '发送',lambda:save(send_now=True),True,width_px=action_width)
     if mac_ui:
         send_button.pack(side='right')
         save_button.pack(side='right',padx=(0,10))

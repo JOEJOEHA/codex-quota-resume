@@ -30,7 +30,7 @@ def loop(root):
     def check():
         try:
             assert button(root,'编辑后续任务').winfo_viewable()
-            button(root,'立即发送').invoke()
+            button(root,'请求发送').invoke()
             wait(root,lambda:any(isinstance(w,tk.Label) and w.cget('text')=='SEND_COMPLETE' for w in walk(root)))
             sender.assert_called_once_with(thread)
             button(root,'GitHub').invoke()

@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as folder:
  assert editor.get('1.0','end-1c')=='retained draft'
  assert 'Cancelled task' in dialog.title()
  assert any(isinstance(w,tk.Label) and '原任务已取消' in w.cget('text') and w.winfo_ismapped() for w in walk(dialog))
- next(w for w in walk(dialog) if isinstance(w,tk.Button) and w.cget('text')=='发送').invoke()
+ next(w for w in walk(dialog) if isinstance(w,tk.Button) and w.cget('text')==('请求发送' if sys.platform=='darwin' else '发送')).invoke()
  data=json.loads(path.read_text())
  assert data['status']=='saved' and data['sendRequested'] and data['text']=='retained draft'
 root.destroy()
