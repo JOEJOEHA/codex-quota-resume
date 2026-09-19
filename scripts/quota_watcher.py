@@ -78,6 +78,8 @@ def request_plan_send(thread):
         plan.pop('resumeAbortCount',None)
         plan['sendRequested']=True
         write_plan(path,plan)
+    if (APP_DIR/'paused.flag').exists():
+        return '已保存发送请求；监控已暂停，点击“恢复监控”后继续处理。'
     return '已请求发送：会话空闲且额度可用时发送。'
 
 
@@ -270,7 +272,12 @@ def deliver_plan(active: dict, dry_run: bool) -> str | None:
     if delayed and aborts<plan.get('resumeAbortCount',0):return 'followup-waiting-evidence'
     if (APP_DIR/'paused.flag').exists():return 'paused'
     if delayed and time.time()<delayed:return 'followup-waiting-delay'
-    if not delayed and (not last or last.get('type') != 'task_complete' or last.get('error')):
+    def manually_sendable(event):
+        return event and (
+            (event.get('type')=='task_complete' and not event.get('error')) or
+            (plan.get('sendRequested') and event.get('type')=='turn_aborted')
+        )
+    if not delayed and not manually_sendable(last):
         return 'followup-waiting-idle'
     if delayed and not last:return 'followup-waiting-evidence'
     if not plan.get('sendRequested') and last.get('turn_id') == active['turnId']:
@@ -286,11 +293,13 @@ def deliver_plan(active: dict, dry_run: bool) -> str | None:
     if any(not Path(item).is_file() for item in plan.get('files', [])):
         return 'followup-missing-file'
     # Quota lookup can take time. Check cancellation/pause again before dispatch.
+    try:last,aborts=session_evidence(active['path'])
+    except (OSError,ValueError):return 'followup-waiting-evidence'
     if delayed:
-        try:last,aborts=session_evidence(active['path'])
-        except (OSError,ValueError):return 'followup-waiting-evidence'
         if result:=cancellation():return result
         if not last or aborts<plan.get('resumeAbortCount',0):return 'followup-waiting-evidence'
+    elif not manually_sendable(last):
+        return 'followup-waiting-idle'
     if (APP_DIR/'paused.flag').exists():return 'paused'
     # Persist before dispatch so interrupted runs never duplicate a user task.
     plan['status'] = 'sending'

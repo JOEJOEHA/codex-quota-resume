@@ -216,3 +216,27 @@ with tempfile.TemporaryDirectory() as directory:
         except RuntimeError:pass
         else:raise AssertionError('Queued follow-up must not be sent again')
 print('EXPLICIT_SEND_REQUEST_OK')
+
+# An explicit manual request can resume an idle task whose previous turn was
+# cancelled. Automatic saved plans still require normal completion.
+with tempfile.TemporaryDirectory() as directory:
+ root=Path(directory);thread='00000000-0000-0000-0000-000000000001'
+ with patch.multiple(w,APP_DIR=root,STATE_PATH=root/'state.json',SESSIONS_DIR=root,LOG_PATH=root/'log',SESSION_CACHE={}):
+  session=root/('rollout-'+thread+'.jsonl')
+  session.write_text(json.dumps({'type':'session_meta','payload':{'cwd':str(root)}})+'\n'+
+                     json.dumps({'type':'event_msg','payload':{'type':'turn_aborted','turn_id':'old'}})+'\n')
+  plan=w.plan_path(thread)
+  w.save_state({'sent':{},'activeDispatch':None})
+  w.write_plan(plan,{'status':'saved','text':'continue after abort','images':[],'files':[]})
+  with patch.object(w,'dispatch',return_value=SimpleNamespace(returncode=0)) as send:
+   assert w.run()=='followup-waiting-resume';send.assert_not_called()
+   (root/'paused.flag').touch()
+   assert '监控已暂停' in w.request_plan_send(thread)
+   assert json.loads(plan.read_text())['sendRequested']
+   assert w.run()=='paused';send.assert_not_called()
+   (root/'paused.flag').unlink()
+   with patch.object(w.codex_status,'available',return_value=False):
+    assert w.run()=='followup-waiting-quota';send.assert_not_called()
+   assert w.run()=='followup-sent';send.assert_called_once()
+   assert json.loads(plan.read_text())['status']=='sent'
+print('MANUAL_ABORTED_SEND_OK: explicit request, pause and quota gates, no automatic replay')

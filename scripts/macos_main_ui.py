@@ -60,7 +60,7 @@ def build(root,version,close_main):
         tone_state[0]=tone
         appearance.bind(pill,bg='window',fg='secondary' if tone=='neutral' else tone)
         render_pill()
-    def saved(plan):
+    def saved(plan,paused=False):
         pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
         requested=pending and plan.get('sendRequested')
         status=plan.get('status')
@@ -68,6 +68,7 @@ def build(root,version,close_main):
         elif status=='queued':heading='已交给 Codex，等待开始'
         elif status=='sending':heading='正在发送，请勿重复点击'
         elif status=='send-failed':heading='发送失败，请查看运行记录'
+        elif requested and paused:heading='已请求发送 · 监控已暂停，请点恢复监控'
         elif requested:heading='已请求发送 · 等待任务空闲和额度'
         elif pending:heading='已保存 1 条后续要求'+(' · 含附件' if plan.get('images') or plan.get('files') else '')
         else:heading='尚未添加后续要求'

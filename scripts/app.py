@@ -219,7 +219,7 @@ def show():
                 pending=plan.get('status') in ('saved','sending','send-failed','cancelled')
             except (OSError,ValueError):pass
         select.set_pending(pending,blink=blink)
-        if mac_ui:mac_ui.saved(plan)
+        if mac_ui:mac_ui.saved(plan,paused=(w.APP_DIR/'paused.flag').exists())
     def saved_feedback(thread):
         note.configure(text='已收到并保存后续任务。')
         index=select.current()

@@ -38,6 +38,8 @@ with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,QUOTA_RESUME_
     assert ui.compose.cget('text')=='编辑后续任务' and ui.send.cget('state')=='normal'
     ui.saved({'status':'saved','text':'Continue developing','sendRequested':True})
     assert ui.send.cget('state')=='disabled' and ui.send.cget('text')=='已请求发送'
+    ui.saved({'status':'saved','text':'Continue developing','sendRequested':True},paused=True)
+    assert any(w.cget('text').startswith('已请求发送 · 监控已暂停') for w in walk(root) if isinstance(w,tk.Label))
     ui.saved({'status':'saved','text':'Continue developing'})
     ui.state('waiting-quota',True,False)
     ui.status.configure(text=status_detail('waiting-quota','等待额度恢复'))
